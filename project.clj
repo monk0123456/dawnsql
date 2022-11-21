@@ -42,4 +42,4 @@
                         :repo-manager true}}
 
   :aot :all
-  :repl-options {:init-ns dawnsql.core})
+  :repl-options {:init-ns core})

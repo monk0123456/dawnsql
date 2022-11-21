@@ -1,4 +1,4 @@
-(ns dawnsql.core)
+(ns core)
 
 (defn foo
   "I don't do a whole lot."
