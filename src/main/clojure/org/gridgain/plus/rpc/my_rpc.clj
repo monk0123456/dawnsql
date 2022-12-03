@@ -55,16 +55,20 @@
                   (and (string? (first f)) (my-lexical/is-eq? (first f) "delete")) (recur ignite group_id r (conj lst-rs (my-smart-db-line/rpc-query_sql ignite group_id (my-super-sql/cull-semicolon f))) ps)
                   (and (string? (first f)) (my-lexical/is-eq? (first f) "select")) (recur ignite group_id r (conj lst-rs (my-smart-db-line/rpc_select_sql ignite group_id (my-super-sql/cull-semicolon f) ps)) ps)
                   ; create dataset
-                  (and (string? (first f)) (my-lexical/is-eq? (first f) "create") (my-lexical/is-eq? (second f) "schema")) (let [rs (my-create-dataset/create_data_set ignite group_id (str/join " " (my-super-sql/cull-semicolon f)))]
+                  (and (string? (first f)) (my-lexical/is-eq? (first f) "create") (my-lexical/is-eq? (second f) "schema")) (if (true? (.isMultiUserGroup (.configuration ignite)))
+                                                                                                                               (let [rs (my-create-dataset/create_data_set ignite group_id (str/join " " (my-super-sql/cull-semicolon f)))]
+                                                                                                                                   (if (nil? rs)
+                                                                                                                                       (recur ignite group_id r (conj lst-rs "true") ps)
+                                                                                                                                       (recur ignite group_id r (conj lst-rs "false") ps)
+                                                                                                                                       ))
+                                                                                                                               (throw (Exception. "单用户组不能执行 create schema 语句")))
+                  ; drop dataset
+                  (and (string? (first f)) (my-lexical/is-eq? (first f) "DROP") (my-lexical/is-eq? (second f) "schema")) (if (true? (.isMultiUserGroup (.configuration ignite)))
+                                                                                                                             (let [rs (my-drop-dataset/drop-data-set-lst ignite group_id (my-super-sql/cull-semicolon f))]
                                                                                                                                  (if (nil? rs)
                                                                                                                                      (recur ignite group_id r (conj lst-rs "true") ps)
-                                                                                                                                     (recur ignite group_id r (conj lst-rs "false") ps)
-                                                                                                                                     ))
-                  ; drop dataset
-                  (and (string? (first f)) (my-lexical/is-eq? (first f) "DROP") (my-lexical/is-eq? (second f) "schema")) (let [rs (my-drop-dataset/drop-data-set-lst ignite group_id (my-super-sql/cull-semicolon f))]
-                                                                                                                               (if (nil? rs)
-                                                                                                                                   (recur ignite group_id r (conj lst-rs "true") ps)
-                                                                                                                                   (recur ignite group_id r (conj lst-rs "false") ps)))
+                                                                                                                                     (recur ignite group_id r (conj lst-rs "false") ps)))
+                                                                                                                             (throw (Exception. "单用户组不能执行 drop schema 语句")))
                   ; create table
                   (and (string? (first f)) (my-lexical/is-eq? (first f) "create") (my-lexical/is-eq? (second f) "table")) (let [rs (my-create-table/my_create_table_lst ignite group_id (my-super-sql/cull-semicolon f))]
                                                                                                                                 (if (nil? rs)

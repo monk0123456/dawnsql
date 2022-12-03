@@ -79,42 +79,42 @@
 (declare get-table-id get-add-table-item get-drop-table-item re-obj)
 
 (defn get-table-id [^Ignite ignite ^String schema_name ^String table_name]
-              (if (my-lexical/is-eq? "public" schema_name)
-                  (first (first (.getAll (.query (.cache ignite "my_meta_tables") (.setArgs (SqlFieldsQuery. "select m.id from my_meta_tables as m where m.data_set_id = 0 and m.table_name = ?") (to-array [(str/lower-case table_name)]))))))
-                  (first (first (.getAll (.query (.cache ignite "my_meta_tables") (.setArgs (SqlFieldsQuery. "select m.id from my_meta_tables as m, my_dataset as d where m.data_set_id = d.id and d.schema_name = ? and m.table_name = ?") (to-array [(str/lower-case schema_name) (str/lower-case table_name)])))))))
-              )
+    (if (my-lexical/is-eq? "public" schema_name)
+        (first (first (.getAll (.query (.cache ignite "my_meta_tables") (.setArgs (SqlFieldsQuery. "select m.id from my_meta_tables as m where m.data_set_id = 0 and m.table_name = ?") (to-array [(str/lower-case table_name)]))))))
+        (first (first (.getAll (.query (.cache ignite "my_meta_tables") (.setArgs (SqlFieldsQuery. "select m.id from my_meta_tables as m, my_dataset as d where m.data_set_id = d.id and d.schema_name = ? and m.table_name = ?") (to-array [(str/lower-case schema_name) (str/lower-case table_name)])))))))
+    )
 (defn get-add-table-item [^Ignite ignite ^Long table_id lst_table_item]
-                    (loop [[f & r] lst_table_item lst-rs (ArrayList.)]
-                        (if (some? f)
-                            (if-not (nil? (first (first (.getAll (.query (.cache ignite "table_item") (.setArgs (SqlFieldsQuery. "select id from MY_META.table_item where table_id = ? and column_name = ?") (to-array [table_id (str/lower-case (.getColumn_name f))])))))))
-                                (let [table-item-id (.incrementAndGet (.atomicSequence ignite "table_item" 0 true))]
-                                    (let [my-key (MyTableItemPK. table-item-id table_id) my-value (doto f (.setId table-item-id)
-                                                                                                          (.setTable_id table_id))]
-                                        (if-not (Strings/isNullOrEmpty (.getMyLogCls (.configuration ignite)))
-                                            (recur r (doto lst-rs (.add (MyCacheEx. (.cache ignite "table_index") my-key my-value (SqlType/INSERT) (MyLogCache. "table_index" "MY_META" "table_index" my-key my-value (SqlType/INSERT))))))
-                                            (recur r (doto lst-rs (.add (MyCacheEx. (.cache ignite "table_index") my-key my-value (SqlType/INSERT) nil)))))
-                                        )
-                                    )
-                                (recur r lst-rs))
-                            lst-rs)))
+    (loop [[f & r] lst_table_item lst-rs (ArrayList.)]
+        (if (some? f)
+            (if-not (nil? (first (first (.getAll (.query (.cache ignite "table_item") (.setArgs (SqlFieldsQuery. "select id from MY_META.table_item where table_id = ? and column_name = ?") (to-array [table_id (str/lower-case (.getColumn_name f))])))))))
+                (let [table-item-id (.incrementAndGet (.atomicSequence ignite "table_item" 0 true))]
+                    (let [my-key (MyTableItemPK. table-item-id table_id) my-value (doto f (.setId table-item-id)
+                                                                                          (.setTable_id table_id))]
+                        (if-not (Strings/isNullOrEmpty (.getMyLogCls (.configuration ignite)))
+                            (recur r (doto lst-rs (.add (MyCacheEx. (.cache ignite "table_index") my-key my-value (SqlType/INSERT) (MyLogCache. "table_index" "MY_META" "table_index" my-key my-value (SqlType/INSERT))))))
+                            (recur r (doto lst-rs (.add (MyCacheEx. (.cache ignite "table_index") my-key my-value (SqlType/INSERT) nil)))))
+                        )
+                    )
+                (recur r lst-rs))
+            lst-rs)))
 (defn get-drop-table-item [^Ignite ignite ^Long table_id lst_table_item]
-                     (loop [[f & r] lst_table_item lst-rs (ArrayList.)]
-                         (if (some? f)
-                             (if-let [table-item-id (first (first (.getAll (.query (.cache ignite "table_item") (.setArgs (SqlFieldsQuery. "select id from MY_META.table_item where table_id = ? and column_name = ?") (to-array [table_id (str/lower-case (.getColumn_name f))]))))))]
-                                 (let [my-key (MyTableItemPK. table-item-id table_id)]
-                                     (if-not (Strings/isNullOrEmpty (.getMyLogCls (.configuration ignite)))
-                                         (recur r (doto lst-rs (.add (MyCacheEx. (.cache ignite "table_index") my-key nil (SqlType/DELETE) (MyLogCache. "table_index" "MY_META" "table_index" my-key nil (SqlType/DELETE))))))
-                                         (recur r (doto lst-rs (.add (MyCacheEx. (.cache ignite "table_index") my-key nil (SqlType/DELETE) nil)))))
-                                     )
-                                 (throw (Exception. (format "要删除的列 %s 不存在！" (.getColumn_name f)))))
-                             lst-rs)))
+    (loop [[f & r] lst_table_item lst-rs (ArrayList.)]
+        (if (some? f)
+            (if-let [table-item-id (first (first (.getAll (.query (.cache ignite "table_item") (.setArgs (SqlFieldsQuery. "select id from MY_META.table_item where table_id = ? and column_name = ?") (to-array [table_id (str/lower-case (.getColumn_name f))]))))))]
+                (let [my-key (MyTableItemPK. table-item-id table_id)]
+                    (if-not (Strings/isNullOrEmpty (.getMyLogCls (.configuration ignite)))
+                        (recur r (doto lst-rs (.add (MyCacheEx. (.cache ignite "table_index") my-key nil (SqlType/DELETE) (MyLogCache. "table_index" "MY_META" "table_index" my-key nil (SqlType/DELETE))))))
+                        (recur r (doto lst-rs (.add (MyCacheEx. (.cache ignite "table_index") my-key nil (SqlType/DELETE) nil)))))
+                    )
+                (throw (Exception. (format "要删除的列 %s 不存在！" (.getColumn_name f)))))
+            lst-rs)))
 (defn re-obj [^String schema_name ^String sql_line]
-        (if-let [m (get_table_alter_obj sql_line)]
-            (cond (and (= (-> m :schema_name) "") (not (= schema_name ""))) (assoc m :schema_name schema_name)
-                  (or (and (not (= (-> m :schema_name) "")) (my-lexical/is-eq? schema_name "MY_META")) (and (not (= (-> m :schema_name) "")) (my-lexical/is-eq? (-> m :schema_name) schema_name))) m
-                  :else
-                  (throw (Exception. "没有修改表的权限！"))
-                  )))
+    (if-let [m (get_table_alter_obj sql_line)]
+        (cond (and (= (-> m :schema_name) "") (not (= schema_name ""))) (assoc m :schema_name schema_name)
+              (or (and (not (= (-> m :schema_name) "")) (my-lexical/is-eq? schema_name "MY_META")) (and (not (= (-> m :schema_name) "")) (my-lexical/is-eq? (-> m :schema_name) schema_name))) m
+              :else
+              (throw (Exception. "没有修改表的权限！"))
+              )))
 
 (defn get-date-items [data]
     (loop [[f & r] data lst #{}]
@@ -203,14 +203,17 @@
 (defn alter-table-obj [^Ignite ignite ^String schema_name ^String sql_line]
     (let [{alter_table :alter_table schema_name :schema_name my-table_name :table_name {line :line is_drop :is_drop is_add :is_add is_exists :is_exists is_no_exists :is_no_exists} :add_or_drop {lst_table_item :lst_table_item code_line :code_line} :colums} (re-obj schema_name sql_line)]
         (let [table_name (str/lower-case my-table_name)]
-            (if-not (and (my-lexical/is-eq? schema_name "my_meta") (contains? plus-init-sql/my-grid-tables-set table_name))
-                (cond (and (true? is_drop) (false? is_add)) {:schema_name schema_name :table_name table_name :sql (format "%s %s.%s %s (%s)" alter_table schema_name table_name line code_line) :pk-data (repace-ast-del ignite schema_name table_name (-> (my-create-table/get_pk_data lst_table_item) :data))}
-                      (and (false? is_drop) (true? is_add)) (if (true? is_no_exists)
-                                                                {:schema_name schema_name :table_name table_name :sql (format "%s %s.%s %s %s" alter_table schema_name table_name line code_line) :pk-data (repace-ast-add ignite schema_name table_name (-> (my-create-table/get_pk_data lst_table_item) :data))}
-                                                                {:schema_name schema_name :table_name table_name :sql (format "%s %s.%s %s (%s)" alter_table schema_name table_name line code_line) :pk-data (repace-ast-add ignite schema_name table_name (-> (my-create-table/get_pk_data lst_table_item) :data))})
-                      :else
-                      (throw (Exception. "修改表的语句有错误！")))
-                (throw (Exception. "MY_META 数据集中的原始表不能被修改！"))))
+            (if (true? (.isMultiUserGroup (.configuration ignite)))
+                (if-not (and (my-lexical/is-eq? schema_name "my_meta") (contains? plus-init-sql/my-grid-tables-set table_name))
+                    (cond (and (true? is_drop) (false? is_add)) {:schema_name schema_name :table_name table_name :sql (format "%s %s.%s %s (%s)" alter_table schema_name table_name line code_line) :pk-data (repace-ast-del ignite schema_name table_name (-> (my-create-table/get_pk_data lst_table_item) :data))}
+                          (and (false? is_drop) (true? is_add)) (if (true? is_no_exists)
+                                                                    {:schema_name schema_name :table_name table_name :sql (format "%s %s.%s %s %s" alter_table schema_name table_name line code_line) :pk-data (repace-ast-add ignite schema_name table_name (-> (my-create-table/get_pk_data lst_table_item) :data))}
+                                                                    {:schema_name schema_name :table_name table_name :sql (format "%s %s.%s %s (%s)" alter_table schema_name table_name line code_line) :pk-data (repace-ast-add ignite schema_name table_name (-> (my-create-table/get_pk_data lst_table_item) :data))})
+                          :else
+                          (throw (Exception. "修改表的语句有错误！")))
+                    (throw (Exception. "MY_META 数据集中的原始表不能被修改！")))
+                {:schema_name "public" :table_name table_name :sql (format "%s %s.%s %s (%s)" alter_table "public" table_name line code_line) :pk-data (repace-ast-add ignite "public" table_name (-> (my-create-table/get_pk_data lst_table_item) :data))})
+            )
         ))
 
 (defn alter_table [^Ignite ignite group_id ^String sql_line]

@@ -56,8 +56,8 @@
                (and (my-lexical/is-eq? f "NOT") (my-lexical/is-eq? (first r) "NULL") (= (count pk_stack) 0)) (recur (rest r) pk_stack type_stack lst_type (conj lst {:not_null true}))
                (my-lexical/is-eq? f "auto") (recur r pk_stack type_stack lst_type (conj lst {:auto true}))
                (some? (re-find #"^(?i)float$|^(?i)double$|^(?i)long$|^(?i)integer$|^(?i)int$|^(?i)SMALLINT$|^(?i)TINYINT$|^(?i)varchar$|^(?i)varchar\(\d+\)$|^(?i)char$|^(?i)char\(\d+\)$|^(?i)BOOLEAN$|^(?i)BIGINT$|^(?i)BINARY$|^(?i)TIMESTAMP$|^(?i)Date$|^(?i)DATETIME$|^(?i)TIME$|^(?i)DECIMAL$|^(?i)REAL$|^(?i)VARBINARY$|^(?i)bit$" f)) (if (= (first r) "(")
-                                                                                                                                                                                                                                                                                                                                         (recur (rest r) pk_stack (conj type_stack (first r)) lst_type (conj lst {:type (my-lexical/convert_to_type f)}))
-                                                                                                                                                                                                                                                                                                                                         (recur r pk_stack [] lst_type (conj lst {:type (my-lexical/convert_to_type f)})))
+                                                                                                                                                                                                                                                                                                                                                   (recur (rest r) pk_stack (conj type_stack (first r)) lst_type (conj lst {:type (my-lexical/convert_to_type f)}))
+                                                                                                                                                                                                                                                                                                                                                   (recur r pk_stack [] lst_type (conj lst {:type (my-lexical/convert_to_type f)})))
                (and (my-lexical/is-eq? f "DEFAULT") (some? (first r))) (recur (rest r) pk_stack type_stack lst_type (conj lst {:default (first r)}))
                :else
                (recur r pk_stack type_stack lst_type (conj lst f)))
@@ -242,12 +242,14 @@
             (throw (Exception. "创建表的语句中 WITH 语句出错！")))
         (throw (Exception. "创建表的语句中 WITH 语句出错！"))))
 
-(defn get_template [^Ignite ignite ^String table_name ^String schema_name ^String schema_name ^String template]
-    (cond (and (= schema_name "") (not (= schema_name ""))) (format "%scache_name=f_%s_%s\"" (get_tmp_line ignite template) (str/lower-case schema_name) (str/lower-case table_name))
-          (or (and (not (= schema_name "")) (my-lexical/is-eq? schema_name "MY_META")) (and (not (= schema_name "")) (my-lexical/is-eq? schema_name schema_name))) (format "%scache_name=f_%s_%s\"" (get_tmp_line ignite template) (str/lower-case schema_name) (str/lower-case table_name))
-          :else
-          (throw (Exception. "没有创建表语句的权限！"))
-          )
+(defn get_template [^Ignite ignite ^String table_name ^String schema_name ^String template]
+    (if (true? (.isMultiUserGroup (.configuration ignite)))
+        (cond (and (= schema_name "") (not (= schema_name ""))) (format "%scache_name=f_%s_%s\"" (get_tmp_line ignite template) (str/lower-case schema_name) (str/lower-case table_name))
+              (or (and (not (= schema_name "")) (my-lexical/is-eq? schema_name "MY_META")) (and (not (= schema_name "")) (my-lexical/is-eq? schema_name schema_name))) (format "%scache_name=f_%s_%s\"" (get_tmp_line ignite template) (str/lower-case schema_name) (str/lower-case table_name))
+              :else
+              (throw (Exception. "没有创建表语句的权限！"))
+              )
+        (format "%scache_name=f_%s_%s\"" (get_tmp_line ignite template) "public" (str/lower-case table_name)))
     )
 
 (defn get-meta-ds [schema_name]
@@ -277,7 +279,7 @@
              :table_name table_name
              :lst_table_item lst_table_item
              :code_sb (.toString code_sb)
-             :template (get_template ignite table_name schema_name schema_name (str/join (rest template)))
+             :template (get_template ignite table_name schema_name (str/join (rest template)))
              }
             (throw (Exception. "创建表的语句错误！")))
         ))
@@ -303,12 +305,14 @@
 (defn to_ddl_obj [^Ignite ignite lst-sql ^String schema_name]
     (if-let [{schema_name-0 :schema_name create_table :create_table table_name-0 :table_name lst_table_item :lst_table_item code_sb :code_sb template :template} (get_table_line_obj ignite lst-sql schema_name)]
         (let [schema_name (str/lower-case schema_name-0) table_name (str/lower-case table_name-0)]
-            (cond (and (= schema_name "") (not (= schema_name "")) (not (my-lexical/is-eq? schema_name "MY_META"))) {:schema_name schema_name :table_name table_name :pk-data (get_pk_data lst_table_item) :sql (format "%s %s.%s (%s) WITH \"%s" create_table schema_name table_name code_sb template)}
-                  (or (and (not (= schema_name "")) (my-lexical/is-eq? schema_name "MY_META")) (and (not (= schema_name "")) (my-lexical/is-eq? schema_name schema_name))) {:schema_name schema_name :table_name table_name :pk-data (get_pk_data lst_table_item) :sql (format "%s %s.%s (%s) WITH \"%s" create_table schema_name table_name code_sb template)}
-                  (and (= schema_name "") (my-lexical/is-eq? schema_name "MY_META")) {:schema_name "public" :table_name table_name :pk-data (get_pk_data lst_table_item) :sql (format "%s %s.%s (%s) WITH \"%s" create_table "public" table_name code_sb template)}
-                  :else
-                  (throw (Exception. "没有创建表语句的权限！"))
-                  ))
+            (if (true? (.isMultiUserGroup (.configuration ignite)))
+                (cond (and (= schema_name "") (not (= schema_name "")) (not (my-lexical/is-eq? schema_name "MY_META"))) {:schema_name schema_name :table_name table_name :pk-data (get_pk_data lst_table_item) :sql (format "%s %s.%s (%s) WITH \"%s" create_table schema_name table_name code_sb template)}
+                      (or (and (not (= schema_name "")) (my-lexical/is-eq? schema_name "MY_META")) (and (not (= schema_name "")) (my-lexical/is-eq? schema_name schema_name))) {:schema_name schema_name :table_name table_name :pk-data (get_pk_data lst_table_item) :sql (format "%s %s.%s (%s) WITH \"%s" create_table schema_name table_name code_sb template)}
+                      (and (= schema_name "") (my-lexical/is-eq? schema_name "MY_META")) {:schema_name "public" :table_name table_name :pk-data (get_pk_data lst_table_item) :sql (format "%s %s.%s (%s) WITH \"%s" create_table "public" table_name code_sb template)}
+                      :else
+                      (throw (Exception. "没有创建表语句的权限！"))
+                      )
+                {:schema_name "public" :table_name table_name :pk-data (get_pk_data lst_table_item) :sql (format "%s %s.%s (%s) WITH \"%s" create_table "public" table_name code_sb template)}))
         (throw (Exception. "创建表的语句错误！"))))
 
 ; group_id序列： group_id schema_name group_type dataset_id

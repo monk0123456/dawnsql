@@ -109,6 +109,8 @@ public class MyDdlUtilEx {
     {
         String sql = (String) map.get(Keyword.intern("sql"));
         PersistentArrayMap index_data = (PersistentArrayMap) map.get(Keyword.intern("index"));
+        PersistentArrayMap ast = (PersistentArrayMap) index_data.get(Keyword.intern("index_ast"));
+        //System.out.println(ast.get(Keyword.intern("schema_name")).toString());
 
         if (myLog != null)
         {
@@ -117,7 +119,7 @@ public class MyDdlUtilEx {
                 myLog.createSession(transSession);
 
                 ignite.cache("public_meta").query(new SqlFieldsQuery(sql)).getAll();
-                ignite.cache("index_ast").put(new MyIndexAstPk(index_data.get(Keyword.intern("schema_index")).toString(), index_data.get(Keyword.intern("index_name")).toString()), index_data.get(Keyword.intern("index_ast")));
+                ignite.cache("index_ast").put(new MyIndexAstPk(ast.get(Keyword.intern("schema_name")).toString(), index_data.get(Keyword.intern("index_name")).toString()), ast);
 
                 MySmartDll mySmartDll = new MySmartDll(sql);
                 myLog.saveTo(transSession, MyCacheExUtil.objToBytes(mySmartDll));
@@ -131,7 +133,7 @@ public class MyDdlUtilEx {
         else
         {
             ignite.cache("public_meta").query(new SqlFieldsQuery(sql)).getAll();
-            ignite.cache("index_ast").put(new MyIndexAstPk(index_data.get(Keyword.intern("schema_index")).toString(), index_data.get(Keyword.intern("index_name")).toString()), index_data.get(Keyword.intern("index_ast")));
+            ignite.cache("index_ast").put(new MyIndexAstPk(ast.get(Keyword.intern("schema_name")).toString(), index_data.get(Keyword.intern("index_name")).toString()), ast);
         }
     }
 

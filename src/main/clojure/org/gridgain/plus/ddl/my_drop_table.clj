@@ -36,11 +36,17 @@
         {:create_index_line create_index :exists true}
         {:create_index_line create_index :exists false}))
 
-(defn get_drop_table_obj [^String sql]
+(defn get_drop_table_obj [^Ignite ignite ^String sql]
     (let [drop_index (re-find #"^(?i)DROP\s+Table\s+IF\s+EXISTS\s+|^(?i)DROP\s+Table\s+" sql) table_name (str/replace sql #"^(?i)DROP\s+Table\s+IF\s+EXISTS\s+|^(?i)DROP\s+Table\s+" "")]
-        (if (some? drop_index)
-            (assoc (my-lexical/get-schema (str/trim table_name)) :drop_line (str/trim drop_index) :is_exists (table_exists (str/trim drop_index)))
-            (throw (Exception. "删除表语句错误！")))))
+        (if (true? (.isMultiUserGroup (.configuration ignite)))
+            (if (some? drop_index)
+                (assoc (my-lexical/get-schema (str/trim table_name)) :drop_line (str/trim drop_index) :is_exists (table_exists (str/trim drop_index)))
+                (throw (Exception. "删除表语句错误！")))
+            (let [{schema_name :schema_name table_name :table_name} (my-lexical/get-schema (str/trim table_name))]
+                (if (or (my-lexical/is-eq? schema_name "public") (my-lexical/is-str-empty? schema_name))
+                    {:schema_name "public" :table_name table_name :drop_line (str/trim drop_index) :is_exists (table_exists (str/trim drop_index))}
+                    (throw (Exception. "单用户组只能操作 public")))))
+        ))
 
 (defn drop-table-obj [^Ignite ignite ^String schema_name ^String sql_line]
     (letfn [(get-table-id [^Ignite ignite ^String schema_name ^String table_name]
@@ -94,7 +100,7 @@
                             (doto lst (.add (MyCacheEx. (.cache ignite "my_meta_tables") table_id nil (SqlType/DELETE) (MyLogCache. "my_meta_tables" "MY_META" "my_meta_tables" table_id nil (SqlType/DELETE)))))
                             (doto lst (.add (MyCacheEx. (.cache ignite "my_meta_tables") table_id nil (SqlType/DELETE) nil))))
                         )))]
-        (let [{schema_name :schema_name table_name :table_name drop_line :drop_line {create_index_line :create_index_line exists :exists} :is_exists} (get_drop_table_obj sql_line)]
+        (let [{schema_name :schema_name table_name :table_name drop_line :drop_line {create_index_line :create_index_line exists :exists} :is_exists} (get_drop_table_obj ignite sql_line)]
             (cond (and (= schema_name "") (not (= schema_name ""))) {:sql (format "%s %s.%s" create_index_line schema_name table_name) :lst_cachex (get-cachex ignite schema_name table_name (ArrayList.)) :nosql (MyNoSqlCache. "table_ast" schema_name table_name (MySchemaTable. schema_name table_name) nil (SqlType/DELETE))}
                   (or (and (not (= schema_name "")) (my-lexical/is-eq? schema_name "MY_META")) (and (not (= schema_name "")) (my-lexical/is-eq? schema_name schema_name))) {:sql (format "%s %s.%s" create_index_line schema_name table_name) :lst_cachex (get-cachex ignite schema_name (str/lower-case table_name) (ArrayList.)) :nosql (MyNoSqlCache. "table_ast" schema_name table_name (MySchemaTable. schema_name table_name) nil (SqlType/DELETE))}
                   :else
@@ -104,7 +110,7 @@
 
 ; 实时数据集
 (defn run_ddl_real_time [^Ignite ignite group_id ^String sql_line ^String schema_name]
-    (if-let [m (get_drop_table_obj sql_line)]
+    (if-let [m (get_drop_table_obj ignite sql_line)]
         (cond (= (first group_id) 0) (let [schema_name (str/lower-case (-> m :schema_name)) table_name (str/lower-case (-> m :table_name))]
                                          (if-not (and (my-lexical/is-eq? schema_name "my_meta") (contains? plus-init-sql/my-grid-tables-set table_name))
                                              (MyDdlUtil/runDdl ignite {:sql (doto (ArrayList.) (.add sql_line)) :lst_cachex nil :nosql (MyNoSqlCache. "table_ast" schema_name table_name (MySchemaTable. schema_name table_name) nil (SqlType/DELETE))} sql_line)
@@ -116,16 +122,18 @@
               )
         ))
 
-(defn my-drop-table-obj [group_id ^String sql_line ^String schema_name]
-    (if-let [m (get_drop_table_obj sql_line)]
-        (cond (= (first group_id) 0) (let [schema_name (str/lower-case (-> m :schema_name)) table_name (str/lower-case (-> m :table_name))]
-                                         (if-not (and (my-lexical/is-eq? schema_name "my_meta") (contains? plus-init-sql/my-grid-tables-set table_name))
-                                             {:schema_name schema_name :table_name table_name :sql sql_line :pk-data nil}
-                                             (throw (Exception. "不能删除 MY_META 中的表语句的权限！"))))
-              (and (not (my-lexical/is-eq? (-> m :schema_name) "my_meta")) (my-lexical/is-eq? (-> m :schema_name) schema_name)) {:schema_name (-> m :schema_name) :table_name (-> m :table_name) :sql sql_line :pk-data nil}
-              :else
-              (throw (Exception. "没有执行语句的权限！"))
-              )
+(defn my-drop-table-obj [ignite group_id ^String sql_line ^String schema_name]
+    (if-let [m (get_drop_table_obj ignite sql_line)]
+        (if (true? (.isMultiUserGroup (.configuration ignite)))
+            (cond (= (first group_id) 0) (let [schema_name (str/lower-case (-> m :schema_name)) table_name (str/lower-case (-> m :table_name))]
+                                             (if-not (and (my-lexical/is-eq? schema_name "my_meta") (contains? plus-init-sql/my-grid-tables-set table_name))
+                                                 {:schema_name schema_name :table_name table_name :sql sql_line :pk-data nil}
+                                                 (throw (Exception. "不能删除 MY_META 中的表语句的权限！"))))
+                  (and (not (my-lexical/is-eq? (-> m :schema_name) "my_meta")) (my-lexical/is-eq? (-> m :schema_name) schema_name)) {:schema_name (-> m :schema_name) :table_name (-> m :table_name) :sql sql_line :pk-data nil}
+                  :else
+                  (throw (Exception. "没有执行语句的权限！"))
+                  )
+            {:schema_name "public" :table_name (-> m :table_name) :sql sql_line :pk-data nil})
         ))
 
 ; 删除表
@@ -133,9 +141,9 @@
 (defn drop_table [^Ignite ignite group_id ^String sql_line]
     (let [sql_code (str/lower-case sql_line)]
         (if (= (first group_id) 0)
-            (MyDdlUtilEx/deleteCache ignite (my-drop-table-obj group_id sql_code (second group_id)))
+            (MyDdlUtilEx/deleteCache ignite (my-drop-table-obj ignite group_id sql_code (second group_id)))
             (if (contains? #{"ALL" "DDL"} (str/upper-case (nth group_id 2)))
-                (MyDdlUtilEx/deleteCache ignite (my-drop-table-obj group_id sql_code (second group_id)))
+                (MyDdlUtilEx/deleteCache ignite (my-drop-table-obj ignite group_id sql_code (second group_id)))
                 (throw (Exception. "该用户组没有执行 DDL 语句的权限！"))))))
 
 ;(defn drop_table [^Ignite ignite ^Long group_id ^String sql_line]

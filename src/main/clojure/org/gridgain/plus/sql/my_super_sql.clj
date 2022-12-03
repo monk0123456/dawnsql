@@ -169,16 +169,20 @@
                    (and (string? (first lst)) (my-lexical/is-eq? (first lst) "delete")) (recur ignite group_id r (conj lst-rs (my-smart-db-line/query_sql ignite group_id (cull-semicolon lst))))
                    (and (string? (first lst)) (my-lexical/is-eq? (first lst) "select")) (recur ignite group_id r (conj lst-rs (my-smart-db-line/query_sql ignite group_id (cull-semicolon lst))))
                    ; create dataset
-                   (and (string? (first lst)) (my-lexical/is-eq? (first lst) "create") (my-lexical/is-eq? (second lst) "schema")) (let [rs (my-create-dataset/create_data_set ignite group_id (str/join " " (cull-semicolon lst)))]
-                                                                                                                                       (if (nil? rs)
-                                                                                                                                           (recur ignite group_id r (conj lst-rs "select show_msg('true') as tip;"))
-                                                                                                                                           (recur ignite group_id r (conj lst-rs "select show_msg('false') as tip;"))
-                                                                                                                                           ))
+                   (and (string? (first lst)) (my-lexical/is-eq? (first lst) "create") (my-lexical/is-eq? (second lst) "schema")) (if (true? (.isMultiUserGroup (.configuration ignite)))
+                                                                                                                                      (let [rs (my-create-dataset/create_data_set ignite group_id (str/join " " (cull-semicolon lst)))]
+                                                                                                                                          (if (nil? rs)
+                                                                                                                                              (recur ignite group_id r (conj lst-rs "select show_msg('true') as tip;"))
+                                                                                                                                              (recur ignite group_id r (conj lst-rs "select show_msg('false') as tip;"))
+                                                                                                                                              ))
+                                                                                                                                      (throw (Exception. "单用户组不能执行 create schema 语句")))
                    ; drop dataset
-                   (and (string? (first lst)) (my-lexical/is-eq? (first lst) "DROP") (my-lexical/is-eq? (second lst) "schema")) (let [rs (my-drop-dataset/drop-data-set-lst ignite group_id (cull-semicolon lst))]
-                                                                                                                                     (if (nil? rs)
-                                                                                                                                         (recur ignite group_id r (conj lst-rs "select show_msg('true') as tip;"))
-                                                                                                                                         (recur ignite group_id r (conj lst-rs "select show_msg('false') as tip;"))))
+                   (and (string? (first lst)) (my-lexical/is-eq? (first lst) "DROP") (my-lexical/is-eq? (second lst) "schema")) (if (true? (.isMultiUserGroup (.configuration ignite)))
+                                                                                                                                    (let [rs (my-drop-dataset/drop-data-set-lst ignite group_id (cull-semicolon lst))]
+                                                                                                                                        (if (nil? rs)
+                                                                                                                                            (recur ignite group_id r (conj lst-rs "select show_msg('true') as tip;"))
+                                                                                                                                            (recur ignite group_id r (conj lst-rs "select show_msg('false') as tip;"))))
+                                                                                                                                    (throw (Exception. "单用户组不能执行 drop schema 语句")))
                    ; create table
                    (and (string? (first lst)) (my-lexical/is-eq? (first lst) "create") (my-lexical/is-eq? (second lst) "table")) (let [rs (my-create-table/my_create_table_lst ignite group_id (cull-semicolon lst))]
                                                                                                                                      (if (nil? rs)

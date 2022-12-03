@@ -128,7 +128,7 @@
                                 (if-not (Strings/isNullOrEmpty (.getMyLogCls (.configuration ignite)))
                                     (doto lst (.add (MyCacheEx. (.cache ignite "table_index") my-key my-value (SqlType/INSERT) (MyLogCache. "table_index" "MY_META" "table_index" my-key my-value (SqlType/INSERT)))))
                                     (doto lst (.add (MyCacheEx. (.cache ignite "table_index") my-key my-value (SqlType/INSERT) nil)))))
-                        ))))
+                            ))))
             (get-index-obj [^String schema_name ^String sql_line]
                 (let [m (get_create_index_obj sql_line)]
                     (cond (and (= (-> m :schema_name) "") (not (= schema_name ""))) (assoc m :schema_name schema_name)
@@ -191,14 +191,24 @@
 (defn create_index [^Ignite ignite group_id ^String sql_line]
     (if (= (first group_id) 0)
         (let [ast (get_create_index_obj sql_line)]
-            (let [{index_name :index_name} ast]
-                (MyDdlUtilEx/saveIndexCache ignite {:sql sql_line :index {:index_name index_name :index_ast ast}})))
+            (if (true? (.isMultiUserGroup (.configuration ignite)))
+                (let [{index_name :index_name} ast]
+                    (MyDdlUtilEx/saveIndexCache ignite {:sql sql_line :index {:index_name index_name :index_ast ast}}))
+                (let [{schema_name :schema_name} ast]
+                    (if (or (my-lexical/is-eq? schema_name "public") (my-lexical/is-str-empty? schema_name))
+                        (let [ast_0 (assoc ast :schema_name "public")]
+                            (let [{index_name :index_name} ast_0]
+                                (MyDdlUtilEx/saveIndexCache ignite {:sql sql_line :index {:index_name index_name :index_ast ast_0}})))
+                        (throw (Exception. "单用户组只能操作 public"))))
+                ))
         (if (contains? #{"ALL" "DDL"} (str/upper-case (nth group_id 2)))
             (let [ast (get_create_index_obj sql_line)]
-                (let [{schema_name :schema_name index_name :index_name} ast]
-                    (cond (and (not (my-lexical/is-eq? schema_name "my_meta")) (my-lexical/is-eq? schema_name (second group_id))) (MyDdlUtilEx/saveIndexCache ignite {:sql sql_line :index {:index_name index_name :index_ast ast}})
-                          (and (not (my-lexical/is-eq? schema_name "my_meta")) (not (my-lexical/is-eq? schema_name (second group_id)))) (throw (Exception. "该用户组没有执行 DDL 语句的权限！"))
-                          (my-lexical/is-eq? schema_name "my_meta") (throw (Exception. "该用户组没有执行 DDL 语句的权限！")))))
+                (if (true? (.isMultiUserGroup (.configuration ignite)))
+                    (let [{schema_name :schema_name index_name :index_name} ast]
+                        (cond (and (not (my-lexical/is-eq? schema_name "my_meta")) (my-lexical/is-eq? schema_name (second group_id))) (MyDdlUtilEx/saveIndexCache ignite {:sql sql_line :index {:index_name index_name :index_ast ast}})
+                              (and (not (my-lexical/is-eq? schema_name "my_meta")) (not (my-lexical/is-eq? schema_name (second group_id)))) (throw (Exception. "该用户组没有执行 DDL 语句的权限！"))
+                              (my-lexical/is-eq? schema_name "my_meta") (throw (Exception. "该用户组没有执行 DDL 语句的权限！"))))
+                    (throw (Exception. "单用户组只能操作 public"))))
             (throw (Exception. "该用户组没有执行 DDL 语句的权限！")))
         ))
 
