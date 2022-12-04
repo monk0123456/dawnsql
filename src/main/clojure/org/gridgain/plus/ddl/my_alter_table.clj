@@ -212,7 +212,11 @@
                           :else
                           (throw (Exception. "修改表的语句有错误！")))
                     (throw (Exception. "MY_META 数据集中的原始表不能被修改！")))
-                {:schema_name "public" :table_name table_name :sql (format "%s %s.%s %s (%s)" alter_table "public" table_name line code_line) :pk-data (repace-ast-add ignite "public" table_name (-> (my-create-table/get_pk_data lst_table_item) :data))})
+                (cond (my-lexical/is-str-empty? schema_name) {:schema_name "public" :table_name table_name :sql (format "%s %s.%s %s (%s)" alter_table "public" table_name line code_line) :pk-data (repace-ast-add ignite "public" table_name (-> (my-create-table/get_pk_data lst_table_item) :data))}
+                      (my-lexical/is-eq? schema_name "public") {:schema_name "public" :table_name table_name :sql (format "%s %s.%s %s (%s)" alter_table "public" table_name line code_line) :pk-data (repace-ast-add ignite "public" table_name (-> (my-create-table/get_pk_data lst_table_item) :data))}
+                      (my-lexical/is-eq? schema_name "my_meta") {:schema_name "public" :table_name table_name :sql (format "%s %s.%s %s (%s)" alter_table "public" table_name line code_line) :pk-data (repace-ast-add ignite "public" table_name (-> (my-create-table/get_pk_data lst_table_item) :data))}
+                      :else
+                      (throw (Exception. "单用户组不能操作非 public schema"))))
             )
         ))
 

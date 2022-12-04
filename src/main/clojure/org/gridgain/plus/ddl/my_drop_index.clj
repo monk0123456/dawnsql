@@ -56,7 +56,7 @@
                           :else
                           (throw (Exception. "没有删除该索引的权限！"))
                           )
-                    (if (or (my-lexical/is-eq? schema-index "public") (my-lexical/is-str-empty? schema-index))
+                    (if (or (my-lexical/is-eq? schema-index "public") (my-lexical/is-str-empty? schema-index) (my-lexical/is-eq? schema-index "my_meta"))
                         {:drop_line (str/trim drop_index) :is_exists (index_exists (str/trim drop_index)) :schema-index "public" :index_name index-name}
                         (throw (Exception. "单用户组不能操作非 public schema")))))
             (throw (Exception. "删除索引语句错误！")))))

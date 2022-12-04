@@ -195,11 +195,14 @@
                 (let [{index_name :index_name} ast]
                     (MyDdlUtilEx/saveIndexCache ignite {:sql sql_line :index {:index_name index_name :index_ast ast}}))
                 (let [{schema_name :schema_name} ast]
-                    (if (or (my-lexical/is-eq? schema_name "public") (my-lexical/is-str-empty? schema_name))
-                        (let [ast_0 (assoc ast :schema_name "public")]
-                            (let [{index_name :index_name} ast_0]
-                                (MyDdlUtilEx/saveIndexCache ignite {:sql sql_line :index {:index_name index_name :index_ast ast_0}})))
-                        (throw (Exception. "单用户组只能操作 public"))))
+                    (cond (my-lexical/is-str-empty? schema_name) (let [ast_0 (assoc ast :schema_name "public")]
+                                                                     (let [{index_name :index_name} ast_0]
+                                                                         (MyDdlUtilEx/saveIndexCache ignite {:sql sql_line :index {:index_name index_name :index_ast ast_0}})))
+                          (or (my-lexical/is-eq? schema_name "public") (my-lexical/is-eq? schema_name "my_meta")) (let [ast_0 (assoc ast :schema_name "public")]
+                                                                                                                      (let [{index_name :index_name} ast_0]
+                                                                                                                          (MyDdlUtilEx/saveIndexCache ignite {:sql sql_line :index {:index_name index_name :index_ast ast_0}})))
+                          :else
+                          (throw (Exception. "单用户组只能操作 public"))))
                 ))
         (if (contains? #{"ALL" "DDL"} (str/upper-case (nth group_id 2)))
             (let [ast (get_create_index_obj sql_line)]

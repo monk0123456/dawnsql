@@ -312,7 +312,11 @@
                       :else
                       (throw (Exception. "没有创建表语句的权限！"))
                       )
-                {:schema_name "public" :table_name table_name :pk-data (get_pk_data lst_table_item) :sql (format "%s %s.%s (%s) WITH \"%s" create_table "public" table_name code_sb template)}))
+                (cond (my-lexical/is-str-empty? schema_name) {:schema_name "public" :table_name table_name :pk-data (get_pk_data lst_table_item) :sql (format "%s %s.%s (%s) WITH \"%s" create_table "public" table_name code_sb template)}
+                      (or (my-lexical/is-eq? schema_name "public") (my-lexical/is-eq? schema_name "my_meta")) {:schema_name "public" :table_name table_name :pk-data (get_pk_data lst_table_item) :sql (format "%s %s.%s (%s) WITH \"%s" create_table "public" table_name code_sb template)}
+                      :else
+                      (throw (Exception. "单用户组只能操作 public")))
+                ))
         (throw (Exception. "创建表的语句错误！"))))
 
 ; group_id序列： group_id schema_name group_type dataset_id

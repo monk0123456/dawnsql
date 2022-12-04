@@ -43,7 +43,7 @@
                 (assoc (my-lexical/get-schema (str/trim table_name)) :drop_line (str/trim drop_index) :is_exists (table_exists (str/trim drop_index)))
                 (throw (Exception. "删除表语句错误！")))
             (let [{schema_name :schema_name table_name :table_name} (my-lexical/get-schema (str/trim table_name))]
-                (if (or (my-lexical/is-eq? schema_name "public") (my-lexical/is-str-empty? schema_name))
+                (if (or (my-lexical/is-eq? schema_name "public") (my-lexical/is-str-empty? schema_name) (my-lexical/is-eq? schema_name "my_meta"))
                     {:schema_name "public" :table_name table_name :drop_line (str/trim drop_index) :is_exists (table_exists (str/trim drop_index))}
                     (throw (Exception. "单用户组只能操作 public")))))
         ))
@@ -133,7 +133,10 @@
                   :else
                   (throw (Exception. "没有执行语句的权限！"))
                   )
-            {:schema_name "public" :table_name (-> m :table_name) :sql sql_line :pk-data nil})
+            (cond (my-lexical/is-str-empty? (-> m :schema_name)) {:schema_name "public" :table_name (-> m :table_name) :sql sql_line :pk-data nil}
+                  (or (my-lexical/is-eq? (-> m :schema_name) "public") (my-lexical/is-eq? (-> m :schema_name) "my_meta")) {:schema_name "public" :table_name (-> m :table_name) :sql sql_line :pk-data nil}
+                  :else
+                  (throw (Exception. "单用户组不能操作非 public schema"))))
         ))
 
 ; 删除表
