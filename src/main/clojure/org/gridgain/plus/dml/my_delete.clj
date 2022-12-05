@@ -135,7 +135,7 @@
 ;        (throw (Exception. "删除语句字符串错误！"))))
 
 (defn my_delete_obj [^Ignite ignite group_id lst-sql args-dic]
-    (if-let [m (my-authority ignite group_id lst-sql args-dic)]
+    (if-let [m (my-lexical/get-re-obj ignite (my-authority ignite group_id lst-sql args-dic))]
         (my_delete_query_sql ignite group_id m)
         (throw (Exception. "删除语句字符串错误！"))))
 
@@ -147,6 +147,6 @@
 ;        (throw (Exception. "删除语句字符串错误！"))))
 
 (defn my_delete_obj-no-authority [^Ignite ignite group_id lst-sql args-dic]
-    (if-let [m (my-no-authority ignite group_id lst-sql args-dic)]
+    (if-let [m (my-lexical/get-re-obj ignite (my-no-authority ignite group_id lst-sql args-dic))]
         (my_delete_query_sql ignite group_id m)
         (throw (Exception. "删除语句字符串错误！"))))

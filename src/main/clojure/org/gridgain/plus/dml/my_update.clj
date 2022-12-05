@@ -361,7 +361,7 @@
         (throw (Exception. "更新语句字符串错误！"))))
 
 (defn my_update_obj [^Ignite ignite group_id lst-sql args-dic]
-    (if-let [m (my-authority ignite group_id lst-sql args-dic)]
+    (if-let [m (my-lexical/get-re-obj ignite (my-authority ignite group_id lst-sql args-dic))]
         (if-let [us (my_update_query_sql ignite group_id m args-dic)]
             us
             (throw (Exception. "更新语句字符串错误！")))
@@ -377,7 +377,7 @@
         (throw (Exception. "更新语句字符串错误！"))))
 
 (defn my_update_obj-authority [^Ignite ignite group_id lst-sql args-dic]
-    (if-let [m (my-no-authority ignite group_id lst-sql args-dic)]
+    (if-let [m (my-lexical/get-re-obj ignite (my-no-authority ignite group_id lst-sql args-dic))]
         (if-let [us (my_update_query_sql ignite group_id m args-dic)]
             us
             (throw (Exception. "更新语句字符串错误！")))

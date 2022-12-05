@@ -1721,7 +1721,14 @@
                         {:sql (str/join "." lst) :args lst-args})))]
         (token-to-code m)))
 
-
+(defn get-re-obj [ignite m]
+    (if (and (map? m) (contains? m :schema_name) (false? (.isMultiUserGroup (.configuration ignite))))
+        (cond (is-str-empty? (-> m :schema_name)) (assoc m :schema_name "public")
+              (is-eq? (-> m :schema_name) "public") (assoc m :schema_name "public")
+              (is-eq? (-> m :schema_name) "my_meta") (assoc m :schema_name "public")
+              :else
+              (throw (Exception. "单用户组只能使用 public")))
+        m))
 
 
 

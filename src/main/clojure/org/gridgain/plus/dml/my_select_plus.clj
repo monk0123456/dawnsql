@@ -1114,34 +1114,45 @@
             ;                        (str/join [table_name " " table_alias])
             ;                        (str/join [(str/join [schema_name "." table_name]) " " table_alias])))
             ;                ))))
+
+            (re-single-schema_name [ignite schema_name]
+                (if (false? (.isMultiUserGroup (.configuration ignite)))
+                    (cond (my-lexical/is-str-empty? schema_name) "public"
+                          (my-lexical/is-eq? schema_name "public") "public"
+                          (my-lexical/is-eq? schema_name "my_meta") "public"
+                          :else
+                          (throw (Exception. "单用户组只能使用 public")))
+                    schema_name))
+
             (table-to-line [ignite group_id m]
                 (if (some? m)
-                    (if-let [{schema_name :schema_name table_name :table_name table_alias :table_alias hints :hints} m]
-                        (if-not (Strings/isNullOrEmpty schema_name)
-                            (if (Strings/isNullOrEmpty table_alias)
-                                (if (Strings/isNullOrEmpty hints)
-                                    (format "%s.%s" schema_name table_name)
-                                    (format "%s.%s %s" schema_name table_name hints))
-                                (if (Strings/isNullOrEmpty hints)
-                                    (str/join [(format "%s.%s" schema_name table_name) " " table_alias])
-                                    (str/join [(format "%s.%s %s" schema_name table_name hints) " " table_alias])))
-                            (if (= (first group_id) 0)
+                    (if-let [{schema_name_0 :schema_name table_name :table_name table_alias :table_alias hints :hints} m]
+                        (let [schema_name (re-single-schema_name ignite schema_name_0)]
+                            (if-not (Strings/isNullOrEmpty schema_name)
                                 (if (Strings/isNullOrEmpty table_alias)
                                     (if (Strings/isNullOrEmpty hints)
-                                        (format "MY_META.%s" table_name)
-                                        (format "MY_META.%s %s" table_name hints))
+                                        (format "%s.%s" schema_name table_name)
+                                        (format "%s.%s %s" schema_name table_name hints))
                                     (if (Strings/isNullOrEmpty hints)
-                                        (str/join [(format "MY_META.%s" table_name) " " table_alias])
-                                        (str/join [(format "MY_META.%s %s" table_name hints) " " table_alias])))
-                                (let [schema_name (get_schema_name ignite group_id)]
+                                        (str/join [(format "%s.%s" schema_name table_name) " " table_alias])
+                                        (str/join [(format "%s.%s %s" schema_name table_name hints) " " table_alias])))
+                                (if (= (first group_id) 0)
                                     (if (Strings/isNullOrEmpty table_alias)
                                         (if (Strings/isNullOrEmpty hints)
-                                            (format "%s.%s" schema_name table_name)
-                                            (format "%s.%s %s" schema_name table_name hints))
+                                            (format "MY_META.%s" table_name)
+                                            (format "MY_META.%s %s" table_name hints))
                                         (if (Strings/isNullOrEmpty hints)
-                                            (str/join [(format "%s.%s" schema_name table_name) " " table_alias])
-                                            (str/join [(format "%s.%s %s" schema_name table_name hints) " " table_alias]))
-                                        ))))
+                                            (str/join [(format "MY_META.%s" table_name) " " table_alias])
+                                            (str/join [(format "MY_META.%s %s" table_name hints) " " table_alias])))
+                                    (let [schema_name (get_schema_name ignite group_id)]
+                                        (if (Strings/isNullOrEmpty table_alias)
+                                            (if (Strings/isNullOrEmpty hints)
+                                                (format "%s.%s" schema_name table_name)
+                                                (format "%s.%s %s" schema_name table_name hints))
+                                            (if (Strings/isNullOrEmpty hints)
+                                                (str/join [(format "%s.%s" schema_name table_name) " " table_alias])
+                                                (str/join [(format "%s.%s %s" schema_name table_name hints) " " table_alias]))
+                                            )))))
                         )))
             ; 获取 data_set 的名字和对应的表
             (get_schema_name [^Ignite ignite group_id]

@@ -35,14 +35,14 @@
         :methods [^:static [my_query_sql [org.apache.ignite.Ignite Object java.util.List] Object]]
         ))
 
-(defn get-re-obj [ignite m]
-    (if (and (map? m) (contains? m :schema_name) (false? (.isMultiUserGroup (.configuration ignite))))
-        (cond (my-lexical/is-str-empty? (-> m :schema_name)) (assoc m :schema_name "public")
-              (my-lexical/is-eq? (-> m :schema_name) "public") (assoc m :schema_name "public")
-              (my-lexical/is-eq? (-> m :schema_name) "my_meta") (assoc m :schema_name "public")
-              :else
-              (throw (Exception. "单用户组只能使用 public")))
-        m))
+;(defn get-re-obj [ignite m]
+;    (if (and (map? m) (contains? m :schema_name) (false? (.isMultiUserGroup (.configuration ignite))))
+;        (cond (my-lexical/is-str-empty? (-> m :schema_name)) (assoc m :schema_name "public")
+;              (my-lexical/is-eq? (-> m :schema_name) "public") (assoc m :schema_name "public")
+;              (my-lexical/is-eq? (-> m :schema_name) "my_meta") (assoc m :schema_name "public")
+;              :else
+;              (throw (Exception. "单用户组只能使用 public")))
+;        m))
 
 ; 在类似 DBeaver 这种工具中开发用的，一条，几条语句一起执行
 
@@ -52,7 +52,7 @@
         (format "f_%s_%s" (str/lower-case schema_name) (str/lower-case table_name))))
 
 (defn insert-to-cache [ignite group_id lst]
-    (if-let [insert_obj (get-re-obj ignite (my-insert/my_insert_obj ignite group_id lst))]
+    (if-let [insert_obj (my-lexical/get-re-obj ignite (my-insert/my_insert_obj ignite group_id lst))]
         (let [{pk_rs :pk_rs data_rs :data_rs} (my-insert/get_pk_data_with_data (my-insert/get_pk_data ignite (-> insert_obj :schema_name) (-> insert_obj :table_name)) insert_obj)]
             (let [my_pk_rs (my-smart-db/re-pk_rs ignite pk_rs (-> insert_obj :schema_name) (-> insert_obj :table_name))]
                 (if (or (nil? my_pk_rs) (empty? my_pk_rs))
@@ -67,7 +67,7 @@
     )
 
 (defn insert-to-cache-no-authority [ignite group_id lst]
-    (if-let [insert_obj (get-re-obj ignite (my-insert/my_insert_obj-no-authority ignite group_id lst))]
+    (if-let [insert_obj (my-lexical/get-re-obj ignite (my-insert/my_insert_obj-no-authority ignite group_id lst))]
         (let [{pk_rs :pk_rs data_rs :data_rs} (my-insert/get_pk_data_with_data (my-insert/get_pk_data ignite (-> insert_obj :schema_name) (-> insert_obj :table_name)) insert_obj)]
             (let [my_pk_rs (my-smart-db/re-pk_rs ignite pk_rs (-> insert_obj :schema_name) (-> insert_obj :table_name))]
                 (if (or (nil? my_pk_rs) (empty? my_pk_rs))
@@ -82,7 +82,7 @@
     )
 
 (defn update-to-cache [ignite group_id lst]
-    (if-let [m-obj (get-re-obj ignite (my-update/my_update_obj ignite group_id lst {}))]
+    (if-let [m-obj (my-update/my_update_obj ignite group_id lst {})]
         (if (contains? m-obj :k-v)
             (let [{schema_name :schema_name table_name :table_name k-v :k-v items :items select-args :args} m-obj]
                 [(MyLogCache. (my-cache-name schema_name table_name) schema_name table_name (my-smart-db/get-update-k-v-key ignite group_id k-v select-args) (my-smart-db/get-update-k-v-value ignite group_id select-args items) (SqlType/UPDATE))])
@@ -97,7 +97,7 @@
         ))
 
 (defn update-to-cache-no-authority [ignite group_id lst]
-    (if-let [m-obj (get-re-obj ignite (my-update/my_update_obj-authority ignite group_id lst {}))]
+    (if-let [m-obj (my-update/my_update_obj-authority ignite group_id lst {})]
         (if (contains? m-obj :k-v)
             (let [{schema_name :schema_name table_name :table_name k-v :k-v items :items select-args :args} m-obj]
                 [(MyLogCache. (my-cache-name schema_name table_name) schema_name table_name (my-smart-db/get-update-k-v-key ignite group_id k-v select-args) (my-smart-db/get-update-k-v-value ignite group_id select-args items) (SqlType/UPDATE))])
@@ -112,7 +112,7 @@
         ))
 
 (defn delete-to-cache [ignite group_id lst]
-    (if-let [m-obj (get-re-obj ignite (my-delete/my_delete_obj ignite group_id lst {}))]
+    (if-let [m-obj (my-delete/my_delete_obj ignite group_id lst {})]
         (if (contains? m-obj :k-v)
             (let [{schema_name :schema_name table_name :table_name k-v :k-v select-args :args} m-obj]
                 [(MyLogCache. (my-cache-name schema_name table_name) schema_name table_name (my-smart-db/get-update-k-v-key ignite group_id k-v select-args) nil (SqlType/DELETE))])
@@ -135,7 +135,7 @@
     )
 
 (defn delete-to-cache-no-authority [ignite group_id lst]
-    (if-let [m-obj (get-re-obj ignite (my-delete/my_delete_obj-no-authority ignite group_id lst {}))]
+    (if-let [m-obj (my-delete/my_delete_obj-no-authority ignite group_id lst {})]
         (if (contains? m-obj :k-v)
             (let [{schema_name :schema_name table_name :table_name k-v :k-v select-args :args} m-obj]
                 [(MyLogCache. (my-cache-name schema_name table_name) schema_name table_name (my-smart-db/get-update-k-v-key ignite group_id k-v select-args) nil (SqlType/DELETE))])
