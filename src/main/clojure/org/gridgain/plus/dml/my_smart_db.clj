@@ -9,7 +9,7 @@
         [org.gridgain.plus.dml.my-select-plus-args :as my-select-plus-args]
         [clojure.core.reducers :as r]
         [clojure.string :as str])
-    (:import (org.apache.ignite Ignite IgniteCache)
+    (:import (org.apache.ignite Ignite Ignition IgniteCache)
              (org.apache.ignite.internal IgnitionEx)
              (com.google.common.base Strings)
              (org.gridgain.smart MyVar MyLetLayer)
@@ -28,7 +28,7 @@
              (java.math BigDecimal)
              )
     (:gen-class
-        :implements [org.gridgain.superservice.INoSqlFun]
+        :implements [org.gridgain.superservice.INoSqlFun cn.smart.service.IMyInsertKv]
         ; 生成 class 的类名
         :name org.gridgain.plus.dml.MySmartDb
         ; 是否生成 class 的 main 方法
@@ -589,6 +589,53 @@
 
 (defn -deleteToCacheNoAuthority [ignite group_id sql args]
     (delete-to-cache-no-authority ignite group_id sql args))
+
+(defn get_user_group [ignite user_token]
+    (if (my-lexical/is-eq? user_token (.getRoot_token (.configuration ignite)))
+        [0 "MY_META" "all"]
+        (let [group_id [0 "MY_META" "all"]]
+            (let [vs (MyVar. (my-lexical/no-sql-get-vs ignite group_id (doto (Hashtable.)
+                                                                           (.put "table_name" "user_group_cache")
+                                                                           (.put "key" (my-lexical/get-value user_token)))))]
+                (cond (my-lexical/not-empty? (my-lexical/get-value vs)) (my-lexical/get-value vs)
+                      :else (let [rs (MyVar. (query_sql ignite group_id "select g.id, g.schema_name, g.group_type from my_users_group as g where g.user_token = ?" [(my-lexical/to_arryList [(my-lexical/get-value user_token)])])) result (MyVar. )]
+                                (do
+                                    (cond (my-lexical/my-is-iter? rs) (try
+                                                                          (loop [M-F-v1625-I-Q1626-c-Y (my-lexical/get-my-iter rs)]
+                                                                              (if (.hasNext M-F-v1625-I-Q1626-c-Y)
+                                                                                  (let [r (.next M-F-v1625-I-Q1626-c-Y)]
+                                                                                      (my-lexical/no-sql-insert ignite group_id (doto (Hashtable.) (.put "table_name" "user_group_cache") (.put "key" (my-lexical/get-value user_token)) (.put "value" r)))
+                                                                                      (.setVar result r)
+                                                                                      (recur M-F-v1625-I-Q1626-c-Y))))
+                                                                          (catch Exception e
+                                                                              (if-not (= (.getMessage e) "my-break")
+                                                                                  (throw e))))
+                                          (my-lexical/my-is-seq? rs) (try
+                                                                         (doseq [r (my-lexical/get-my-seq rs)]
+                                                                             (my-lexical/no-sql-insert ignite group_id (doto (Hashtable.) (.put "table_name" "user_group_cache")(.put "key" (my-lexical/get-value user_token))(.put "value" r)))
+                                                                             (.setVar result r)
+                                                                             )
+                                                                         (catch Exception e
+                                                                             (if-not (= (.getMessage e) "my-break")
+                                                                                 (throw e))))
+                                          :else
+                                          (throw (Exception. "for 循环只能处理列表或者是执行数据库的结果"))
+                                          )
+                                    (my-lexical/get-value result))))))))
+
+(defn -getInsertKvAgrs [this ^String userToken ^String sql ^List args]
+    (let [ignite (Ignition/ignite)]
+        (let [group_id (get_user_group ignite userToken)]
+            (let [log-cache (insert-to-cache ignite group_id sql args)]
+                (doto (Hashtable.) (.put "cache_name" (.getCache_name log-cache))
+                                   (.put "key" (MyCacheExUtil/convertToKey ignite log-cache))
+                                   (.put "value" (MyCacheExUtil/convertToValue ignite log-cache))
+                                   )))))
+
+;(defn -getInsertKvAgrs [this ^String userToken ^String sql ^List args]
+;    (let [ignite (Ignition/ignite)]
+;        (let [group_id (get_user_group ignite userToken)]
+;            (insert-to-cache ignite group_id sql args))))
 
 ;(defn trans
 ;    ([ignite group_id lst] (trans ignite group_id lst []))
