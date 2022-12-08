@@ -159,6 +159,17 @@
         {:sql (str/join (to-sql (my-select/ast_to_sql ignite group_id func-ast)))}
         (my-smart-clj/smart-lst-to-clj ignite group_id smart-code-lst)))
 
+(defn batched-update [ignite group_id lst]
+    (loop [[f & r] lst cache-name nil rs (ArrayList.)]
+        (if (some? f)
+            (let [m (my-smart-db/insert-to-cache-lst ignite group_id f nil)]
+                (cond (nil? cache-name) (recur r (.getCache_name m) (doto rs (.add m)))
+                      (my-lexical/is-eq? cache-name (.getCache_name m)) (recur r (.getCache_name m) (doto rs (.add m)))
+                      :else
+                      (throw (Exception. "批量上传必须是同一个表，才可以！"))
+                      ))
+            (MyCacheExUtil/dataStream ignite rs))))
+
 (defn super-sql-lst
     ([^Ignite ignite ^Long group_id ^String userToken ^String schema_name ^String group_type lst] (super-sql-lst ignite [group_id schema_name group_type] lst []))
     ([^Ignite ignite group_id [lst & r] lst-rs]
@@ -221,20 +232,26 @@
                    (and (string? (first lst)) (my-lexical/is-eq? (first lst) "show_train_data")) (if-let [show-sql (call-show-train-data ignite group_id (cull-semicolon lst))]
                                                                                                      (recur ignite group_id r (conj lst-rs (format "select show_train_data(%s) as tip;" show-sql))))
                    :else
-                   (if (string? (first lst))
-                       (let [smart-sql-obj (my-smart-sql ignite group_id lst)]
-                           (cond (and (map? smart-sql-obj) (contains? smart-sql-obj :sql)) (recur ignite group_id r (conj lst-rs (format "select %s;" (-> smart-sql-obj :sql))))
-                                 (my-lexical/is-map? smart-sql-obj) (recur ignite group_id r (conj lst-rs (format "select show_msg('%s') as tip;" (MyGson/groupObjToLine smart-sql-obj))))
-                                 (my-lexical/is-seq? smart-sql-obj) (recur ignite group_id r (conj lst-rs (format "select show_msg('%s') as tip;" (MyGson/groupObjToLine smart-sql-obj))))
-                                 :else
-                                 (recur ignite group_id r (conj lst-rs (format "select show_msg('%s') as tip;" smart-sql-obj)))))
-                       (let [smart-sql-obj (my-smart-sql ignite group_id (apply concat lst))]
-                           (cond (and (map? smart-sql-obj) (contains? smart-sql-obj :sql)) (recur ignite group_id r (conj lst-rs (format "select %s;" (-> smart-sql-obj :sql))))
-                                 (my-lexical/is-map? smart-sql-obj) (recur ignite group_id r (conj lst-rs (format "select show_msg('%s') as tip;" (MyGson/groupObjToLine smart-sql-obj))))
-                                 (my-lexical/is-seq? smart-sql-obj) (recur ignite group_id r (conj lst-rs (format "select show_msg('%s') as tip;" (MyGson/groupObjToLine smart-sql-obj))))
-                                 :else
-                                 (recur ignite group_id r (conj lst-rs (format "select show_msg('%s') as tip;" smart-sql-obj)))))
-                       )
+                   (if (and (string? (first lst)) (my-lexical/is-eq? (first lst) "set") (my-lexical/is-eq? (second lst) "STREAMING"))
+                       (if (some? r)
+                           (let [b-u (batched-update ignite group_id r)]
+                               (if (nil? b-u)
+                                   "select show_msg('批量更新成功！') as tip;"))
+                           (recur ignite group_id r (conj lst-rs (str/join " " lst))))
+                       (if (string? (first lst))
+                           (let [smart-sql-obj (my-smart-sql ignite group_id lst)]
+                               (cond (and (map? smart-sql-obj) (contains? smart-sql-obj :sql)) (recur ignite group_id r (conj lst-rs (format "select %s;" (-> smart-sql-obj :sql))))
+                                     (my-lexical/is-map? smart-sql-obj) (recur ignite group_id r (conj lst-rs (format "select show_msg('%s') as tip;" (MyGson/groupObjToLine smart-sql-obj))))
+                                     (my-lexical/is-seq? smart-sql-obj) (recur ignite group_id r (conj lst-rs (format "select show_msg('%s') as tip;" (MyGson/groupObjToLine smart-sql-obj))))
+                                     :else
+                                     (recur ignite group_id r (conj lst-rs (format "select show_msg('%s') as tip;" smart-sql-obj)))))
+                           (let [smart-sql-obj (my-smart-sql ignite group_id (apply concat lst))]
+                               (cond (and (map? smart-sql-obj) (contains? smart-sql-obj :sql)) (recur ignite group_id r (conj lst-rs (format "select %s;" (-> smart-sql-obj :sql))))
+                                     (my-lexical/is-map? smart-sql-obj) (recur ignite group_id r (conj lst-rs (format "select show_msg('%s') as tip;" (MyGson/groupObjToLine smart-sql-obj))))
+                                     (my-lexical/is-seq? smart-sql-obj) (recur ignite group_id r (conj lst-rs (format "select show_msg('%s') as tip;" (MyGson/groupObjToLine smart-sql-obj))))
+                                     :else
+                                     (recur ignite group_id r (conj lst-rs (format "select show_msg('%s') as tip;" smart-sql-obj)))))
+                           ))
                    ;(throw (Exception. "输入字符有错误！不能解析，请确认输入正确！"))
                    ))
          (if-not (empty? lst-rs)

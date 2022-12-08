@@ -205,6 +205,27 @@
             ))
     )
 
+(defn insert-to-cache-lst [ignite group_id lst-sql args]
+    (if (some? args)
+        (let [args-dic (args-to-dic args)]
+            (if-let [insert_obj (my-insert/my_insert_obj ignite group_id (get-args-to-lst lst-sql (-> args-dic :keys)))]
+                (let [{pk_rs :pk_rs data_rs :data_rs} (my-insert/get_pk_data_with_data (my-insert/get_pk_data ignite (-> insert_obj :schema_name) (-> insert_obj :table_name)) insert_obj)]
+                    (let [my_pk_rs (re-pk_rs ignite pk_rs (-> insert_obj :schema_name) (-> insert_obj :table_name))]
+                        (if (or (nil? my_pk_rs) (empty? my_pk_rs))
+                            (throw (Exception. "插入数据主键不能为空！"))
+                            (MyLogCache. (my-lexical/my-cache-name (-> insert_obj :schema_name) (-> insert_obj :table_name)) (-> insert_obj :schema_name) (-> insert_obj :table_name) (get-insert-pk ignite group_id my_pk_rs args-dic) (get-insert-data ignite group_id data_rs args-dic) (SqlType/INSERT))))
+                    )
+                ))
+        (if-let [insert_obj (my-insert/my_insert_obj ignite group_id lst-sql)]
+            (let [{pk_rs :pk_rs data_rs :data_rs} (my-insert/get_pk_data_with_data (my-insert/get_pk_data ignite (-> insert_obj :schema_name) (-> insert_obj :table_name)) insert_obj)]
+                (let [my_pk_rs (re-pk_rs ignite pk_rs (-> insert_obj :schema_name) (-> insert_obj :table_name))]
+                    (if (or (nil? my_pk_rs) (empty? my_pk_rs))
+                        (throw (Exception. "插入数据主键不能为空！"))
+                        (MyLogCache. (my-lexical/my-cache-name (-> insert_obj :schema_name) (-> insert_obj :table_name)) (-> insert_obj :schema_name) (-> insert_obj :table_name) (get-insert-pk ignite group_id my_pk_rs {:dic {}, :keys []}) (get-insert-data ignite group_id data_rs {:dic {}, :keys []}) (SqlType/INSERT))))
+                )
+            ))
+    )
+
 (defn insert-to-cache-no-authority [ignite group_id sql args]
     (if (some? args)
         (let [args-dic (args-to-dic args)]

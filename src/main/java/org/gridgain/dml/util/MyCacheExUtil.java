@@ -3,15 +3,12 @@ package org.gridgain.dml.util;
 import clojure.lang.*;
 import cn.plus.model.*;
 import cn.smart.service.IMyLogTrans;
-import org.apache.ignite.IgniteTransactions;
-import org.apache.ignite.Ignition;
+import org.apache.ignite.*;
 import org.apache.ignite.cache.query.SqlFieldsQuery;
 import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.smart.service.MyLogService;
 import org.apache.ignite.transactions.Transaction;
 import org.tools.KvSql;
-import org.apache.ignite.Ignite;
-import org.apache.ignite.IgniteCache;
 import org.apache.ignite.binary.BinaryObject;
 import org.apache.ignite.binary.BinaryObjectBuilder;
 import org.tools.MyLineToBinary;
@@ -29,6 +26,21 @@ public class MyCacheExUtil implements Serializable {
     private static final long serialVersionUID = 7714300623488330841L;
 
     private static IMyLogTrans myLog = MyLogService.getInstance().getMyLog();
+
+    public static void dataStream(final Ignite ignite, final List<MyLogCache> lstLogCache)
+    {
+        if (lstLogCache != null && lstLogCache.size() > 0)
+        {
+            try (IgniteDataStreamer stmr = ignite.dataStreamer(lstLogCache.get(0).getCache_name())) {
+
+                for (MyLogCache m : lstLogCache)
+                {
+                    stmr.addData(convertToKey(ignite, m), convertToValue(ignite, m));
+                }
+                stmr.flush();
+            }
+        }
+    }
 
 //    public static void transLogCache(final Ignite ignite, final List<MyLogCache> lstLogCache)
 //    {
