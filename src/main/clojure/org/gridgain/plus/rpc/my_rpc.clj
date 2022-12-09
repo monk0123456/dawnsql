@@ -107,27 +107,33 @@
                   (and (string? (first f)) (my-lexical/is-eq? (first f) "show_train_data")) (if-let [show-sql (my-super-sql/call-show-train-data ignite group_id (my-super-sql/cull-semicolon f))]
                                                                                                 (recur ignite group_id r (conj lst-rs (.getAll (.query (.cache ignite "public_meta") (SqlFieldsQuery. (format "select show_train_data(%s) as tip;" show-sql))))) ps))
                   :else
-                  (if (string? (first f))
-                      (let [smart-sql-obj (my-super-sql/my-smart-sql ignite group_id f)]
-                          ;(if (map? smart-sql-obj)
-                          ;    (recur ignite group_id r (conj lst-rs (-> smart-sql-obj :sql)) ps)
-                          ;    (recur ignite group_id r (conj lst-rs smart-sql-obj) ps))
-                          (cond (and (map? smart-sql-obj) (contains? smart-sql-obj :sql)) (recur ignite group_id r (conj lst-rs (-> smart-sql-obj :sql)) ps)
-                                (my-lexical/is-map? smart-sql-obj) (recur ignite group_id r (conj lst-rs (MyGson/groupObjToLine smart-sql-obj)) ps)
-                                (my-lexical/is-seq? smart-sql-obj) (recur ignite group_id r (conj lst-rs (MyGson/groupObjToLine smart-sql-obj)) ps)
-                                :else
-                                (recur ignite group_id r (conj lst-rs smart-sql-obj) ps))
+                  (if (and (string? (first f)) (my-lexical/is-eq? (first f) "set") (my-lexical/is-eq? (second f) "STREAMING"))
+                      (if (some? r)
+                          (let [b-u (my-super-sql/batched-update ignite group_id r)]
+                              (if (nil? b-u)
+                                  "批量更新成功！"))
                           )
-                      (let [smart-sql-obj (my-super-sql/my-smart-sql ignite group_id (apply concat f))]
-                          ;(if (map? smart-sql-obj)
-                          ;    (recur ignite group_id r (conj lst-rs (-> smart-sql-obj :sql)) ps)
-                          ;    (recur ignite group_id r (conj lst-rs smart-sql-obj) ps))
-                          (cond (and (map? smart-sql-obj) (contains? smart-sql-obj :sql)) (recur ignite group_id r (conj lst-rs (-> smart-sql-obj :sql)) ps)
-                                (my-lexical/is-map? smart-sql-obj) (recur ignite group_id r (conj lst-rs (MyGson/groupObjToLine smart-sql-obj)) ps)
-                                (my-lexical/is-seq? smart-sql-obj) (recur ignite group_id r (conj lst-rs (MyGson/groupObjToLine smart-sql-obj)) ps)
-                                :else
-                                (recur ignite group_id r (conj lst-rs smart-sql-obj) ps)))
-                      )
+                      (if (string? (first f))
+                          (let [smart-sql-obj (my-super-sql/my-smart-sql ignite group_id f)]
+                              ;(if (map? smart-sql-obj)
+                              ;    (recur ignite group_id r (conj lst-rs (-> smart-sql-obj :sql)) ps)
+                              ;    (recur ignite group_id r (conj lst-rs smart-sql-obj) ps))
+                              (cond (and (map? smart-sql-obj) (contains? smart-sql-obj :sql)) (recur ignite group_id r (conj lst-rs (-> smart-sql-obj :sql)) ps)
+                                    (my-lexical/is-map? smart-sql-obj) (recur ignite group_id r (conj lst-rs (MyGson/groupObjToLine smart-sql-obj)) ps)
+                                    (my-lexical/is-seq? smart-sql-obj) (recur ignite group_id r (conj lst-rs (MyGson/groupObjToLine smart-sql-obj)) ps)
+                                    :else
+                                    (recur ignite group_id r (conj lst-rs smart-sql-obj) ps))
+                              )
+                          (let [smart-sql-obj (my-super-sql/my-smart-sql ignite group_id (apply concat f))]
+                              ;(if (map? smart-sql-obj)
+                              ;    (recur ignite group_id r (conj lst-rs (-> smart-sql-obj :sql)) ps)
+                              ;    (recur ignite group_id r (conj lst-rs smart-sql-obj) ps))
+                              (cond (and (map? smart-sql-obj) (contains? smart-sql-obj :sql)) (recur ignite group_id r (conj lst-rs (-> smart-sql-obj :sql)) ps)
+                                    (my-lexical/is-map? smart-sql-obj) (recur ignite group_id r (conj lst-rs (MyGson/groupObjToLine smart-sql-obj)) ps)
+                                    (my-lexical/is-seq? smart-sql-obj) (recur ignite group_id r (conj lst-rs (MyGson/groupObjToLine smart-sql-obj)) ps)
+                                    :else
+                                    (recur ignite group_id r (conj lst-rs smart-sql-obj) ps)))
+                          ))
                   ;(throw (Exception. "输入字符有错误！不能解析，请确认输入正确！"))
                   ))
         (if-not (empty? lst-rs)

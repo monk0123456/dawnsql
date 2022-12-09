@@ -237,7 +237,7 @@
                            (let [b-u (batched-update ignite group_id r)]
                                (if (nil? b-u)
                                    "select show_msg('批量更新成功！') as tip;"))
-                           (recur ignite group_id r (conj lst-rs (str/join " " lst))))
+                           )
                        (if (string? (first lst))
                            (let [smart-sql-obj (my-smart-sql ignite group_id lst)]
                                (cond (and (map? smart-sql-obj) (contains? smart-sql-obj :sql)) (recur ignite group_id r (conj lst-rs (format "select %s;" (-> smart-sql-obj :sql))))
