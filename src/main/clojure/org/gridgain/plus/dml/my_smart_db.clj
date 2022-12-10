@@ -184,26 +184,26 @@
                 lst-rs))
         ))
 
-(defn insert-to-cache [ignite group_id sql args]
-    (if (some? args)
-        (let [args-dic (args-to-dic args)]
-            (if-let [insert_obj (my-insert/my_insert_obj ignite group_id (get-args-to-lst (my-lexical/to-back sql) (-> args-dic :keys)))]
-                (let [{pk_rs :pk_rs data_rs :data_rs} (my-insert/get_pk_data_with_data (my-insert/get_pk_data ignite (-> insert_obj :schema_name) (-> insert_obj :table_name)) insert_obj)]
-                    (let [my_pk_rs (re-pk_rs ignite pk_rs (-> insert_obj :schema_name) (-> insert_obj :table_name))]
-                        (if (or (nil? my_pk_rs) (empty? my_pk_rs))
-                            (throw (Exception. "插入数据主键不能为空！"))
-                            (MyLogCache. (my-lexical/my-cache-name (-> insert_obj :schema_name) (-> insert_obj :table_name)) (-> insert_obj :schema_name) (-> insert_obj :table_name) (get-insert-pk ignite group_id my_pk_rs args-dic) (get-insert-data ignite group_id data_rs args-dic) (SqlType/INSERT))))
-                    )
-                ))
-        (if-let [insert_obj (my-insert/my_insert_obj ignite group_id (my-lexical/to-back sql))]
-            (let [{pk_rs :pk_rs data_rs :data_rs} (my-insert/get_pk_data_with_data (my-insert/get_pk_data ignite (-> insert_obj :schema_name) (-> insert_obj :table_name)) insert_obj)]
-                (let [my_pk_rs (re-pk_rs ignite pk_rs (-> insert_obj :schema_name) (-> insert_obj :table_name))]
-                    (if (or (nil? my_pk_rs) (empty? my_pk_rs))
-                        (throw (Exception. "插入数据主键不能为空！"))
-                        (MyLogCache. (my-lexical/my-cache-name (-> insert_obj :schema_name) (-> insert_obj :table_name)) (-> insert_obj :schema_name) (-> insert_obj :table_name) (get-insert-pk ignite group_id my_pk_rs {:dic {}, :keys []}) (get-insert-data ignite group_id data_rs {:dic {}, :keys []}) (SqlType/INSERT))))
-                )
-            ))
-    )
+;(defn insert-to-cache [ignite group_id sql args]
+;    (if (some? args)
+;        (let [args-dic (args-to-dic args)]
+;            (if-let [insert_obj (my-insert/my_insert_obj ignite group_id (get-args-to-lst (my-lexical/to-back sql) (-> args-dic :keys)))]
+;                (let [{pk_rs :pk_rs data_rs :data_rs} (my-insert/get_pk_data_with_data (my-insert/get_pk_data ignite (-> insert_obj :schema_name) (-> insert_obj :table_name)) insert_obj)]
+;                    (let [my_pk_rs (re-pk_rs ignite pk_rs (-> insert_obj :schema_name) (-> insert_obj :table_name))]
+;                        (if (or (nil? my_pk_rs) (empty? my_pk_rs))
+;                            (throw (Exception. "插入数据主键不能为空！"))
+;                            (MyLogCache. (my-lexical/my-cache-name (-> insert_obj :schema_name) (-> insert_obj :table_name)) (-> insert_obj :schema_name) (-> insert_obj :table_name) (get-insert-pk ignite group_id my_pk_rs args-dic) (get-insert-data ignite group_id data_rs args-dic) (SqlType/INSERT))))
+;                    )
+;                ))
+;        (if-let [insert_obj (my-insert/my_insert_obj ignite group_id (my-lexical/to-back sql))]
+;            (let [{pk_rs :pk_rs data_rs :data_rs} (my-insert/get_pk_data_with_data (my-insert/get_pk_data ignite (-> insert_obj :schema_name) (-> insert_obj :table_name)) insert_obj)]
+;                (let [my_pk_rs (re-pk_rs ignite pk_rs (-> insert_obj :schema_name) (-> insert_obj :table_name))]
+;                    (if (or (nil? my_pk_rs) (empty? my_pk_rs))
+;                        (throw (Exception. "插入数据主键不能为空！"))
+;                        (MyLogCache. (my-lexical/my-cache-name (-> insert_obj :schema_name) (-> insert_obj :table_name)) (-> insert_obj :schema_name) (-> insert_obj :table_name) (get-insert-pk ignite group_id my_pk_rs {:dic {}, :keys []}) (get-insert-data ignite group_id data_rs {:dic {}, :keys []}) (SqlType/INSERT))))
+;                )
+;            ))
+;    )
 
 ;(defn insert-to-cache-lst [ignite group_id lst-sql args]
 ;    (if (some? args)
@@ -280,24 +280,57 @@
 (defn insert-to-cache-lst [ignite group_id lst args]
     (insert-to-cache-lst-sub ignite group_id (my-select-plus/my-get-items lst) args))
 
-(defn insert-to-cache-no-authority [ignite group_id sql args]
+(defn insert-to-cache [ignite group_id sql args]
+    (insert-to-cache-lst ignite group_id (my-lexical/to-back sql) args))
+
+(defn insert-to-cache-no-authority-lst-sub [ignite group_id [f & r] args]
     (if (some? args)
         (let [args-dic (args-to-dic args)]
-            (if-let [insert_obj (my-insert/my_insert_obj-no-authority ignite group_id (get-args-to-lst (my-lexical/to-back sql) (-> args-dic :keys)))]
-                (let [{pk_rs :pk_rs data_rs :data_rs} (my-insert/get_pk_data_with_data (my-insert/get_pk_data ignite (-> insert_obj :schema_name) (-> insert_obj :table_name)) insert_obj)]
-                    (let [my_pk_rs (re-pk_rs ignite pk_rs (-> insert_obj :schema_name) (-> insert_obj :table_name))]
-                        (if (or (nil? my_pk_rs) (empty? my_pk_rs))
-                            (throw (Exception. "插入数据主键不能为空！"))
-                            (MyLogCache. (my-lexical/my-cache-name (-> insert_obj :schema_name) (-> insert_obj :table_name)) (-> insert_obj :schema_name) (-> insert_obj :table_name) (get-insert-pk ignite group_id my_pk_rs args-dic) (get-insert-data ignite group_id data_rs args-dic) (SqlType/INSERT)))))
-                ))
-        (if-let [insert_obj (my-insert/my_insert_obj-no-authority ignite group_id (my-lexical/to-back sql))]
-            (let [{pk_rs :pk_rs data_rs :data_rs} (my-insert/get_pk_data_with_data (my-insert/get_pk_data ignite (-> insert_obj :schema_name) (-> insert_obj :table_name)) insert_obj)]
-                (let [my_pk_rs (re-pk_rs ignite pk_rs (-> insert_obj :schema_name) (-> insert_obj :table_name))]
-                    (if (or (nil? my_pk_rs) (empty? my_pk_rs))
-                        (throw (Exception. "插入数据主键不能为空！"))
-                        (MyLogCache. (my-lexical/my-cache-name (-> insert_obj :schema_name) (-> insert_obj :table_name)) (-> insert_obj :schema_name) (-> insert_obj :table_name) (get-insert-pk ignite group_id my_pk_rs {:dic {}, :keys []}) (get-insert-data ignite group_id data_rs {:dic {}, :keys []}) (SqlType/INSERT)))))
-            ))
-    )
+            (if-let [insert_obj (my-insert/my_insert_obj-no-authority ignite group_id (get-args-to-lst f (-> args-dic :keys)))]
+                (let [pk_data (my-insert/get_pk_data ignite (-> insert_obj :schema_name) (-> insert_obj :table_name)) pk-m (get-auto-id ignite (-> insert_obj :schema_name) (-> insert_obj :table_name))]
+                    (loop [[f-obj & r-obj] (cons insert_obj (ex-insert-lst insert_obj r)) log-rs []]
+                        (if (some? f-obj)
+                            (let [{pk_rs :pk_rs data_rs :data_rs} (my-insert/get_pk_data_with_data pk_data insert_obj)]
+                                (let [my_pk_rs (my-re-pk_rs pk_rs pk-m)]
+                                    (if (or (nil? my_pk_rs) (empty? my_pk_rs))
+                                        (throw (Exception. "插入数据主键不能为空！"))
+                                        (recur r-obj (conj log-rs (MyLogCache. (my-lexical/my-cache-name (-> insert_obj :schema_name) (-> insert_obj :table_name)) (-> insert_obj :schema_name) (-> insert_obj :table_name) (get-insert-pk ignite group_id my_pk_rs args-dic) (get-insert-data ignite group_id data_rs args-dic) (SqlType/INSERT)))))))
+                            )))))
+        (if-let [insert_obj (my-insert/my_insert_obj-no-authority ignite group_id f)]
+            (let [pk_data (my-insert/get_pk_data ignite (-> insert_obj :schema_name) (-> insert_obj :table_name)) pk-m (get-auto-id ignite (-> insert_obj :schema_name) (-> insert_obj :table_name))]
+                (loop [[f-obj & r-obj] (cons insert_obj (ex-insert-lst insert_obj r)) log-rs []]
+                    (if (some? f-obj)
+                        (let [{pk_rs :pk_rs data_rs :data_rs} (my-insert/get_pk_data_with_data pk_data insert_obj)]
+                            (let [my_pk_rs (my-re-pk_rs pk_rs pk-m)]
+                                (if (or (nil? my_pk_rs) (empty? my_pk_rs))
+                                    (throw (Exception. "插入数据主键不能为空！"))
+                                    (recur r-obj (conj log-rs (MyLogCache. (my-lexical/my-cache-name (-> insert_obj :schema_name) (-> insert_obj :table_name)) (-> insert_obj :schema_name) (-> insert_obj :table_name) (get-insert-pk ignite group_id my_pk_rs {:dic {}, :keys []}) (get-insert-data ignite group_id data_rs {:dic {}, :keys []}) (SqlType/INSERT)))))))
+                        log-rs))))))
+
+;(defn insert-to-cache-no-authority [ignite group_id sql args]
+;    (if (some? args)
+;        (let [args-dic (args-to-dic args)]
+;            (if-let [insert_obj (my-insert/my_insert_obj-no-authority ignite group_id (get-args-to-lst (my-lexical/to-back sql) (-> args-dic :keys)))]
+;                (let [{pk_rs :pk_rs data_rs :data_rs} (my-insert/get_pk_data_with_data (my-insert/get_pk_data ignite (-> insert_obj :schema_name) (-> insert_obj :table_name)) insert_obj)]
+;                    (let [my_pk_rs (re-pk_rs ignite pk_rs (-> insert_obj :schema_name) (-> insert_obj :table_name))]
+;                        (if (or (nil? my_pk_rs) (empty? my_pk_rs))
+;                            (throw (Exception. "插入数据主键不能为空！"))
+;                            (MyLogCache. (my-lexical/my-cache-name (-> insert_obj :schema_name) (-> insert_obj :table_name)) (-> insert_obj :schema_name) (-> insert_obj :table_name) (get-insert-pk ignite group_id my_pk_rs args-dic) (get-insert-data ignite group_id data_rs args-dic) (SqlType/INSERT)))))
+;                ))
+;        (if-let [insert_obj (my-insert/my_insert_obj-no-authority ignite group_id (my-lexical/to-back sql))]
+;            (let [{pk_rs :pk_rs data_rs :data_rs} (my-insert/get_pk_data_with_data (my-insert/get_pk_data ignite (-> insert_obj :schema_name) (-> insert_obj :table_name)) insert_obj)]
+;                (let [my_pk_rs (re-pk_rs ignite pk_rs (-> insert_obj :schema_name) (-> insert_obj :table_name))]
+;                    (if (or (nil? my_pk_rs) (empty? my_pk_rs))
+;                        (throw (Exception. "插入数据主键不能为空！"))
+;                        (MyLogCache. (my-lexical/my-cache-name (-> insert_obj :schema_name) (-> insert_obj :table_name)) (-> insert_obj :schema_name) (-> insert_obj :table_name) (get-insert-pk ignite group_id my_pk_rs {:dic {}, :keys []}) (get-insert-data ignite group_id data_rs {:dic {}, :keys []}) (SqlType/INSERT)))))
+;            ))
+;    )
+
+(defn insert-to-cache-no-authority-lst [ignite group_id lst args]
+    (insert-to-cache-no-authority-lst-sub ignite group_id (my-select-plus/my-get-items lst) args))
+
+(defn insert-to-cache-no-authority [ignite group_id sql args]
+    (insert-to-cache-no-authority-lst ignite group_id (my-lexical/to-back sql) args))
 
 (defn update-to-cache [ignite group_id sql args]
     (if (some? args)
@@ -530,7 +563,7 @@
                                                   (.iterator (.query (.cache ignite "public_meta") (doto (SqlFieldsQuery. sql) (.setLazy true))))))
           (re-find #"^(?i)insert\s+" sql) (let [logCache (insert-to-cache ignite group_id sql nil)]
                                               (if (instance? MyLogCache logCache)
-                                                  (MyCacheExUtil/transLogCache ignite (my-lexical/to_arryList [logCache]))))
+                                                  (MyCacheExUtil/transLogCache ignite (my-lexical/to_arryList logCache))))
           (re-find #"^(?i)update\s+" sql) (let [logCache (update-to-cache ignite group_id sql nil)]
                                               (MyCacheExUtil/transLogCache ignite (my-lexical/to_arryList logCache)))
           (re-find #"^(?i)delete\s+" sql) (let [logCache (delete-to-cache ignite group_id sql nil)]
@@ -546,7 +579,7 @@
                                                       (.iterator (.query (.cache ignite "public_meta") (doto (SqlFieldsQuery. sql) (.setLazy true) (.setArgs (to-array args-1))))))))
           (re-find #"^(?i)insert\s+" sql) (let [logCache (insert-to-cache ignite group_id sql args)]
                                               (if (instance? MyLogCache logCache)
-                                                  (MyCacheExUtil/transLogCache ignite (my-lexical/to_arryList [logCache])))
+                                                  (MyCacheExUtil/transLogCache ignite (my-lexical/to_arryList logCache)))
                                               )
           (re-find #"^(?i)update\s+" sql) (let [logCache (update-to-cache ignite group_id sql args)]
                                               (MyCacheExUtil/transLogCache ignite (my-lexical/to_arryList logCache)))
@@ -561,7 +594,7 @@
                                               (let [sql (-> (my-select-plus-args/my-ast-to-sql-no-authority ignite group_id nil ast) :sql)]
                                                   (.iterator (.query (.cache ignite "public_meta") (doto (SqlFieldsQuery. sql) (.setLazy true))))))
           (re-find #"^(?i)insert\s+" sql) (let [logCache (insert-to-cache-no-authority ignite group_id sql nil)]
-                                              (MyCacheExUtil/transLogCache ignite (my-lexical/to_arryList [logCache])))
+                                              (MyCacheExUtil/transLogCache ignite (my-lexical/to_arryList logCache)))
           (re-find #"^(?i)update\s+" sql) (let [logCache (update-to-cache-no-authority ignite group_id sql nil)]
                                               (MyCacheExUtil/transLogCache ignite (my-lexical/to_arryList logCache)))
           (re-find #"^(?i)delete\s+" sql) (let [logCache (delete-to-cache-no-authority ignite group_id sql nil)]
@@ -576,7 +609,7 @@
                                                   (let [{sql :sql args-1 :args} (my-select-plus-args/my-ast-to-sql ignite group_id args-dic ast)]
                                                       (.iterator (.query (.cache ignite "public_meta") (doto (SqlFieldsQuery. sql) (.setLazy true) (.setArgs (to-array args-1))))))))
           (re-find #"^(?i)insert\s+" sql) (let [logCache (insert-to-cache-no-authority ignite group_id sql args)]
-                                              (MyCacheExUtil/transLogCache ignite (my-lexical/to_arryList [logCache])))
+                                              (MyCacheExUtil/transLogCache ignite (my-lexical/to_arryList logCache)))
           (re-find #"^(?i)update\s+" sql) (let [logCache (update-to-cache-no-authority ignite group_id sql args)]
                                               (MyCacheExUtil/transLogCache ignite (my-lexical/to_arryList logCache)))
           (re-find #"^(?i)delete\s+" sql) (let [logCache (delete-to-cache-no-authority ignite group_id sql args)]
