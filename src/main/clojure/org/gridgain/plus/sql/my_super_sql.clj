@@ -162,9 +162,9 @@
 (defn batched-update [ignite group_id lst]
     (loop [[f & r] lst cache-name nil rs (ArrayList.)]
         (if (some? f)
-            (let [m (my-smart-db/insert-to-cache-lst ignite group_id f nil)]
-                (cond (nil? cache-name) (recur r (.getCache_name m) (doto rs (.add m)))
-                      (my-lexical/is-eq? cache-name (.getCache_name m)) (recur r (.getCache_name m) (doto rs (.add m)))
+            (let [m (my-smart-db/insert-to-cache-lst ignite group_id (cull-semicolon f) nil)]
+                (cond (and (nil? cache-name) (my-lexical/not-empty? m)) (recur r (.getCache_name (first m)) (doto rs (.addAll m)))
+                      (and (my-lexical/not-empty? m) (my-lexical/is-eq? cache-name (.getCache_name (first m)))) (recur r (.getCache_name (first m)) (doto rs (.addAll m)))
                       :else
                       (throw (Exception. "批量上传必须是同一个表，才可以！"))
                       ))

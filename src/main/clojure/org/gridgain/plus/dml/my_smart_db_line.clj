@@ -51,35 +51,41 @@
         (str/lower-case table_name)
         (format "f_%s_%s" (str/lower-case schema_name) (str/lower-case table_name))))
 
+;(defn insert-to-cache [ignite group_id lst]
+;    (if-let [insert_obj (my-lexical/get-re-obj ignite (my-insert/my_insert_obj ignite group_id lst))]
+;        (let [{pk_rs :pk_rs data_rs :data_rs} (my-insert/get_pk_data_with_data (my-insert/get_pk_data ignite (-> insert_obj :schema_name) (-> insert_obj :table_name)) insert_obj)]
+;            (let [my_pk_rs (my-smart-db/re-pk_rs ignite pk_rs (-> insert_obj :schema_name) (-> insert_obj :table_name))]
+;                (if (or (nil? my_pk_rs) (empty? my_pk_rs))
+;                    (throw (Exception. "插入数据的表不存在，或者主键为空！"))
+;                    (let [my-key (my-smart-db/get-insert-pk ignite group_id my_pk_rs {:dic {}, :keys []}) my-value (my-smart-db/get-insert-data ignite group_id data_rs {:dic {}, :keys []})]
+;                        (cond (and (my-lexical/is-seq? my-key) (empty? my-key)) (throw (Exception. "插入数据主键不能为空！"))
+;                              (nil? my-key) (throw (Exception. "插入数据主键不能为空！"))
+;                              (empty? my-value) (throw (Exception. "插入数据不能为空！"))
+;                              :else (MyLogCache. (my-cache-name (-> insert_obj :schema_name) (-> insert_obj :table_name)) (-> insert_obj :schema_name) (-> insert_obj :table_name) my-key my-value (SqlType/INSERT))
+;                              ))))
+;            ))
+;    )
+
 (defn insert-to-cache [ignite group_id lst]
-    (if-let [insert_obj (my-lexical/get-re-obj ignite (my-insert/my_insert_obj ignite group_id lst))]
-        (let [{pk_rs :pk_rs data_rs :data_rs} (my-insert/get_pk_data_with_data (my-insert/get_pk_data ignite (-> insert_obj :schema_name) (-> insert_obj :table_name)) insert_obj)]
-            (let [my_pk_rs (my-smart-db/re-pk_rs ignite pk_rs (-> insert_obj :schema_name) (-> insert_obj :table_name))]
-                (if (or (nil? my_pk_rs) (empty? my_pk_rs))
-                    (throw (Exception. "插入数据的表不存在，或者主键为空！"))
-                    (let [my-key (my-smart-db/get-insert-pk ignite group_id my_pk_rs {:dic {}, :keys []}) my-value (my-smart-db/get-insert-data ignite group_id data_rs {:dic {}, :keys []})]
-                        (cond (and (my-lexical/is-seq? my-key) (empty? my-key)) (throw (Exception. "插入数据主键不能为空！"))
-                              (nil? my-key) (throw (Exception. "插入数据主键不能为空！"))
-                              (empty? my-value) (throw (Exception. "插入数据不能为空！"))
-                              :else (MyLogCache. (my-cache-name (-> insert_obj :schema_name) (-> insert_obj :table_name)) (-> insert_obj :schema_name) (-> insert_obj :table_name) my-key my-value (SqlType/INSERT))
-                              ))))
-            ))
-    )
+    (my-smart-db/insert-to-cache-lst ignite group_id lst nil))
+
+;(defn insert-to-cache-no-authority [ignite group_id lst]
+;    (if-let [insert_obj (my-lexical/get-re-obj ignite (my-insert/my_insert_obj-no-authority ignite group_id lst))]
+;        (let [{pk_rs :pk_rs data_rs :data_rs} (my-insert/get_pk_data_with_data (my-insert/get_pk_data ignite (-> insert_obj :schema_name) (-> insert_obj :table_name)) insert_obj)]
+;            (let [my_pk_rs (my-smart-db/re-pk_rs ignite pk_rs (-> insert_obj :schema_name) (-> insert_obj :table_name))]
+;                (if (or (nil? my_pk_rs) (empty? my_pk_rs))
+;                    (throw (Exception. "插入数据主键不能为空！"))
+;                    (let [my-key (my-smart-db/get-insert-pk ignite group_id my_pk_rs {:dic {}, :keys []}) my-value (my-smart-db/get-insert-data ignite group_id data_rs {:dic {}, :keys []})]
+;                        (cond (and (my-lexical/is-seq? my-key) (empty? my-key)) (throw (Exception. "插入数据主键不能为空！"))
+;                              (nil? my-key) (throw (Exception. "插入数据主键不能为空！"))
+;                              (empty? my-value) (throw (Exception. "插入数据不能为空！"))
+;                              :else (MyLogCache. (my-cache-name (-> insert_obj :schema_name) (-> insert_obj :table_name)) (-> insert_obj :schema_name) (-> insert_obj :table_name) my-key my-value (SqlType/INSERT))
+;                              ))))
+;            ))
+;    )
 
 (defn insert-to-cache-no-authority [ignite group_id lst]
-    (if-let [insert_obj (my-lexical/get-re-obj ignite (my-insert/my_insert_obj-no-authority ignite group_id lst))]
-        (let [{pk_rs :pk_rs data_rs :data_rs} (my-insert/get_pk_data_with_data (my-insert/get_pk_data ignite (-> insert_obj :schema_name) (-> insert_obj :table_name)) insert_obj)]
-            (let [my_pk_rs (my-smart-db/re-pk_rs ignite pk_rs (-> insert_obj :schema_name) (-> insert_obj :table_name))]
-                (if (or (nil? my_pk_rs) (empty? my_pk_rs))
-                    (throw (Exception. "插入数据主键不能为空！"))
-                    (let [my-key (my-smart-db/get-insert-pk ignite group_id my_pk_rs {:dic {}, :keys []}) my-value (my-smart-db/get-insert-data ignite group_id data_rs {:dic {}, :keys []})]
-                        (cond (and (my-lexical/is-seq? my-key) (empty? my-key)) (throw (Exception. "插入数据主键不能为空！"))
-                              (nil? my-key) (throw (Exception. "插入数据主键不能为空！"))
-                              (empty? my-value) (throw (Exception. "插入数据不能为空！"))
-                              :else (MyLogCache. (my-cache-name (-> insert_obj :schema_name) (-> insert_obj :table_name)) (-> insert_obj :schema_name) (-> insert_obj :table_name) my-key my-value (SqlType/INSERT))
-                              ))))
-            ))
-    )
+    (my-smart-db/insert-to-cache-no-authority-lst ignite group_id lst nil))
 
 (defn update-to-cache [ignite group_id lst]
     (if-let [m-obj (my-update/my_update_obj ignite group_id lst {})]
@@ -153,7 +159,7 @@
     (cond (my-lexical/is-eq? "select" (first lst)) (if-let [ast (my-select-plus/sql-to-ast lst)]
                                                        (-> (my-select-plus-args/my-ast-to-sql ignite group_id nil ast) :sql))
           (my-lexical/is-eq? "insert" (first lst)) (let [logCache (insert-to-cache ignite group_id lst)]
-                                                       (if (nil? (MyCacheExUtil/transLogCache ignite (my-lexical/to_arryList [logCache])))
+                                                       (if (nil? (MyCacheExUtil/transLogCache ignite logCache))
                                                            "select show_msg('true') as tip;"
                                                            "select show_msg('false') as tip;"))
           (my-lexical/is-eq? "update" (first lst)) (let [logCache (update-to-cache ignite group_id lst)]
@@ -177,7 +183,7 @@
     (cond (my-lexical/is-eq? "select" (first lst)) (if-let [ast (my-select-plus/sql-to-ast lst)]
                                                        (-> (my-select-plus-args/my-ast-to-sql-no-authority ignite group_id nil ast) :sql))
           (my-lexical/is-eq? "insert" (first lst)) (let [logCache (insert-to-cache-no-authority ignite group_id lst)]
-                                                       (if (nil? (MyCacheExUtil/transLogCache ignite (my-lexical/to_arryList [logCache])))
+                                                       (if (nil? (MyCacheExUtil/transLogCache ignite (my-lexical/to_arryList logCache)))
                                                            "select show_msg('true') as tip;"
                                                            "select show_msg('false') as tip;"))
           (my-lexical/is-eq? "update" (first lst)) (let [logCache (update-to-cache-no-authority ignite group_id lst)]
@@ -218,7 +224,7 @@
     (cond (my-lexical/is-eq? "select" (first lst)) (if-let [ast (my-select-plus/sql-to-ast lst)]
                                                        (-> (my-select-plus-args/my-ast-to-sql ignite group_id nil ast) :sql))
           (my-lexical/is-eq? "insert" (first lst)) (let [logCache (insert-to-cache ignite group_id lst)]
-                                                       (if (nil? (MyCacheExUtil/transLogCache ignite (my-lexical/to_arryList [logCache])))
+                                                       (if (nil? (MyCacheExUtil/transLogCache ignite (my-lexical/to_arryList logCache)))
                                                            "true"
                                                            "false"))
           (my-lexical/is-eq? "update" (first lst)) (let [logCache (update-to-cache ignite group_id lst)]
@@ -242,7 +248,7 @@
     (cond (my-lexical/is-eq? "select" (first lst)) (if-let [ast (my-select-plus/sql-to-ast lst)]
                                                        (-> (my-select-plus-args/my-ast-to-sql-no-authority ignite group_id nil ast) :sql))
           (my-lexical/is-eq? "insert" (first lst)) (let [logCache (insert-to-cache-no-authority ignite group_id lst)]
-                                                       (if (nil? (MyCacheExUtil/transLogCache ignite (my-lexical/to_arryList [logCache])))
+                                                       (if (nil? (MyCacheExUtil/transLogCache ignite (my-lexical/to_arryList logCache)))
                                                            "true"
                                                            "false"))
           (my-lexical/is-eq? "update" (first lst)) (let [logCache (update-to-cache-no-authority ignite group_id lst)]
