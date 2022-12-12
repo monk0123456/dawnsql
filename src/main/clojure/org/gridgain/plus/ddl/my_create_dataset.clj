@@ -20,8 +20,8 @@
 
 (defn get-dataset-name [^String sql]
     (let [lst (my-lexical/to-back (str/lower-case sql))]
-        (cond (and (= (count lst) 6) (= '("create" "schema" "if" "not" "exists") (map str/lower-case (take 5 lst)))) (last lst)
-              (and (= (count lst) 3) (= '("create" "schema") (map str/lower-case (take 2 lst)))) (last lst)
+        (cond (and (= (count lst) 6) (= '("create" "schema" "if" "not" "exists") (map str/lower-case (take 5 lst)))) {:schema_name (last lst) :exists true}
+              (and (= (count lst) 3) (= '("create" "schema") (map str/lower-case (take 2 lst)))) {:schema_name (last lst) :exists false}
               :else
               (throw (Exception. "输入字符串错误！"))
               )))
@@ -29,7 +29,7 @@
 ; CREATE DATASET CRM_DATA_SET
 (defn create_data_set [^Ignite ignite group_id ^String sql]
     (if (= (first group_id) 0)
-        (if-let [schema_name (get-dataset-name sql)]
+        (if-let [{schema_name :schema_name exists :exists} (get-dataset-name sql)]
             (if-not (my-lexical/is-eq? schema_name "my_meta")
                 (let [ds-cache (.cache ignite "my_meta_table")]
                     (let [schema_name_u (str/upper-case schema_name)]
@@ -37,7 +37,8 @@
                             (if (some? (.getOrCreateCache ignite (doto (CacheConfiguration. (str (str/lower-case schema_name) "_meta"))
                                                                      (.setSqlSchema schema_name_u))))
                                 (.initSchemaFunc (.getInitFunc (MyInitFuncService/getInstance)) ignite schema_name_u))
-                            (throw (Exception. "该数据集已经存在了！"))))
+                            (if (false? exists)
+                                (throw (Exception. "该数据集已经存在了！")))))
                     )
                 (throw (Exception. "该数据集已经存在了！")))
             (throw (Exception. "创建数据集语句的错误！")))

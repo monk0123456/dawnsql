@@ -298,7 +298,7 @@
                                :else
                                (recur r stack (conj stack-lst f))
                                )
-                         (throw (Exception. "Smart 脚本错误！请仔细检查！"))))
+                         (throw (Exception. "Dawn Sql 脚本错误！请仔细检查！"))))
                     )]
             (get-small-lst lst))))
 
@@ -316,7 +316,7 @@
                                :else
                                (recur r stack (conj stack-lst f))
                                )
-                         (throw (Exception. "Smart 脚本错误！请仔细检查！"))))
+                         (throw (Exception. "Dawn Sql 脚本错误！请仔细检查！"))))
                     )]
             (get-big-lst lst))))
 
@@ -550,7 +550,7 @@
             (if-not (nil? rest-lst)
                 (concat [{:func-name func-name :args-lst args-lst :body-lst (body-segment big-lst)}] (re-ast (get-ast-lst rest-lst)))
                 (if (nil? func-name)
-                    (throw (Exception. "smart sql 程序有误！"))
+                    (throw (Exception. "Dawn Sql 程序有误！"))
                     [{:func-name func-name :args-lst args-lst :body-lst (body-segment big-lst)}])
                 ))))
 

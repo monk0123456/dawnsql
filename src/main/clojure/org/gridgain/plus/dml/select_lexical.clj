@@ -1268,37 +1268,130 @@
          (if (> (count lst) 0) (concat lst_result [(str/join lst)]) lst_result)
          )))
 
+;(defn to-back
+;    ([^String line] (to-back line [] [] [] [] []))
+;    ([[f & rs] stack-str stack-zhushi-1 stack-zhushi-2 lst lst_result]
+;     (if (some? f)
+;         (cond (and (= f \.) (= (count stack-str) 0) (= (count stack-zhushi-1) 0) (= (count stack-zhushi-2) 0)) (if (> (count lst) 0) (recur rs stack-str stack-zhushi-1 stack-zhushi-2 [] (concat lst_result [(str/join lst) "."])) (recur rs stack-str stack-zhushi-1 stack-zhushi-2 [] (concat lst_result ["."])))
+;               (and (= f \;) (= (count stack-str) 0) (= (count stack-zhushi-1) 0) (= (count stack-zhushi-2) 0)) (if (> (count lst) 0) (recur rs stack-str stack-zhushi-1 stack-zhushi-2 [] (concat lst_result [(str/join lst) ";"])) (recur rs stack-str stack-zhushi-1 stack-zhushi-2 [] (concat lst_result [";"])))
+;               (and (= f \:) (= (count stack-str) 0) (= (count stack-zhushi-1) 0) (= (count stack-zhushi-2) 0)) (if (> (count lst) 0) (recur rs stack-str stack-zhushi-1 stack-zhushi-2 [] (concat lst_result [(str/join lst) ":"])) (recur rs stack-str stack-zhushi-1 stack-zhushi-2 [] (concat lst_result [":"])))
+;               (and (= f \[) (= (count stack-str) 0) (= (count stack-zhushi-1) 0) (= (count stack-zhushi-2) 0)) (if (> (count lst) 0) (recur rs stack-str stack-zhushi-1 stack-zhushi-2 [] (concat lst_result [(str/join lst) "["])) (recur rs stack-str stack-zhushi-1 stack-zhushi-2 [] (concat lst_result ["["])))
+;               (and (= f \]) (= (count stack-str) 0) (= (count stack-zhushi-1) 0) (= (count stack-zhushi-2) 0)) (if (> (count lst) 0) (recur rs stack-str stack-zhushi-1 stack-zhushi-2 [] (concat lst_result [(str/join lst) "]"])) (recur rs stack-str stack-zhushi-1 stack-zhushi-2 [] (concat lst_result ["]"])))
+;               (and (= f \{) (= (count stack-str) 0) (= (count stack-zhushi-1) 0) (= (count stack-zhushi-2) 0)) (if (> (count lst) 0) (recur rs stack-str stack-zhushi-1 stack-zhushi-2 [] (concat lst_result [(str/join lst) "{"])) (recur rs stack-str stack-zhushi-1 stack-zhushi-2 [] (concat lst_result ["{"])))
+;               (and (= f \}) (= (count stack-str) 0) (= (count stack-zhushi-1) 0) (= (count stack-zhushi-2) 0)) (if (> (count lst) 0) (recur rs stack-str stack-zhushi-1 stack-zhushi-2 [] (concat lst_result [(str/join lst) "}"])) (recur rs stack-str stack-zhushi-1 stack-zhushi-2 [] (concat lst_result ["}"])))
+;
+;               (and (= f \space) (= (count stack-str) 0) (= (count stack-zhushi-1) 0) (= (count stack-zhushi-2) 0)) (if (> (count lst) 0) (recur rs stack-str stack-zhushi-1 stack-zhushi-2 [] (concat lst_result [(str/join lst)])) (recur rs stack-str stack-zhushi-1 stack-zhushi-2 [] lst_result))
+;               (and (= f \() (= (count stack-str) 0) (= (count stack-zhushi-1) 0) (= (count stack-zhushi-2) 0)) (if (> (count lst) 0) (recur rs stack-str stack-zhushi-1 stack-zhushi-2 [] (concat lst_result [(str/join lst) "("])) (recur rs stack-str stack-zhushi-1 stack-zhushi-2 [] (concat lst_result ["("])))
+;               (and (= f \)) (= (count stack-str) 0) (= (count stack-zhushi-1) 0) (= (count stack-zhushi-2) 0)) (if (> (count lst) 0) (recur rs stack-str stack-zhushi-1 stack-zhushi-2 [] (concat lst_result [(str/join lst) ")"])) (recur rs stack-str stack-zhushi-1 stack-zhushi-2 [] (concat lst_result [")"])))
+;
+;               (and (= f \/) (= (first rs) \*) (= (count stack-str) 0) (= (count stack-zhushi-1) 0) (= (count stack-zhushi-2) 0)) (recur (rest rs) stack-str (conj stack-zhushi-1 1) stack-zhushi-2 lst lst_result)
+;               (and (= f \*) (= (first rs) \/) (= (count stack-str) 0) (> (count stack-zhushi-1) 0) (= (count stack-zhushi-2) 0)) (recur (rest rs) stack-str (pop stack-zhushi-1) stack-zhushi-2 [] lst_result)
+;               (and (= f \-) (= (first rs) \-) (= (count stack-str) 0) (= (count stack-zhushi-1) 0) (= (count stack-zhushi-2) 0)) (recur (rest rs) stack-str stack-zhushi-1 (conj stack-zhushi-2 1) lst lst_result)
+;
+;               (and (= f \,) (= (count stack-str) 0) (= (count stack-zhushi-1) 0) (= (count stack-zhushi-2) 0)) (if (> (count lst) 0) (recur rs stack-str stack-zhushi-1 stack-zhushi-2 [] (concat lst_result [(str/join lst) ","])) (recur rs stack-str stack-zhushi-1 stack-zhushi-2 [] (concat lst_result [","])))
+;               (and (= f \+) (= (count stack-str) 0) (= (count stack-zhushi-1) 0) (= (count stack-zhushi-2) 0)) (if (> (count lst) 0) (recur rs stack-str stack-zhushi-1 stack-zhushi-2 [] (concat lst_result [(str/join lst) "+"])) (recur rs stack-str stack-zhushi-1 stack-zhushi-2 [] (concat lst_result ["+"])))
+;               (and (= f \-) (not= (first rs) \-) (= (count stack-str) 0) (= (count stack-zhushi-1) 0) (= (count stack-zhushi-2) 0)) (if (> (count lst) 0) (recur rs stack-str stack-zhushi-1 stack-zhushi-2 [] (concat lst_result [(str/join lst) "-"])) (recur rs stack-str stack-zhushi-1 stack-zhushi-2 [] (concat lst_result ["-"])))
+;               (and (= f \*) (not= (first rs) \/) (= (count stack-str) 0) (= (count stack-zhushi-1) 0) (= (count stack-zhushi-2) 0)) (if (> (count lst) 0) (recur rs stack-str stack-zhushi-1 stack-zhushi-2 [] (concat lst_result [(str/join lst) "*"])) (recur rs stack-str stack-zhushi-1 stack-zhushi-2 [] (concat lst_result ["*"])))
+;               (and (= f \/) (= (count stack-str) 0) (= (count stack-zhushi-1) 0) (= (count stack-zhushi-2) 0)) (if (> (count lst) 0) (recur rs stack-str stack-zhushi-1 stack-zhushi-2 [] (concat lst_result [(str/join lst) "/"])) (recur rs stack-str stack-zhushi-1 stack-zhushi-2 [] (concat lst_result ["/"])))
+;               (and (= f \=) (= (count stack-str) 0) (= (count stack-zhushi-1) 0) (= (count stack-zhushi-2) 0)) (if (> (count lst) 0) (recur rs stack-str stack-zhushi-1 stack-zhushi-2 [] (concat lst_result [(str/join lst) "="])) (recur rs stack-str stack-zhushi-1 stack-zhushi-2 [] (concat lst_result ["="])))
+;               (and (= f \>) (some? (first rs)) (= (first rs) \=) (= (count stack-str) 0) (= (count stack-zhushi-1) 0) (= (count stack-zhushi-2) 0)) (if (> (count lst) 0) (recur (rest rs) stack-str stack-zhushi-1 stack-zhushi-2 [] (concat lst_result [(str/join lst) ">="])) (recur (rest rs) stack-str stack-zhushi-1 stack-zhushi-2 [] (concat lst_result [">="])))
+;               (and (= f \>) (some? (first rs)) (not= (first rs) \=) (= (count stack-str) 0) (= (count stack-zhushi-1) 0) (= (count stack-zhushi-2) 0)) (if (> (count lst) 0) (recur rs stack-str stack-zhushi-1 stack-zhushi-2 [] (concat lst_result [(str/join lst) ">"])) (recur rs stack-str stack-zhushi-1 stack-zhushi-2 [] (concat lst_result [">"])))
+;               (and (= f \<) (some? (first rs)) (= (first rs) \=) (= (count stack-str) 0) (= (count stack-zhushi-1) 0) (= (count stack-zhushi-2) 0)) (if (> (count lst) 0) (recur (rest rs) stack-str stack-zhushi-1 stack-zhushi-2 [] (concat lst_result [(str/join lst) "<="])) (recur (rest rs) stack-str stack-zhushi-1 stack-zhushi-2 [] (concat lst_result ["<="])))
+;               (and (= f \<) (some? (first rs)) (not= (first rs) \=) (not= (first rs) \>) (= (count stack-str) 0) (= (count stack-zhushi-1) 0) (= (count stack-zhushi-2) 0)) (if (> (count lst) 0) (recur rs stack-str stack-zhushi-1 stack-zhushi-2 [] (concat lst_result [(str/join lst) "<"])) (recur rs stack-str stack-zhushi-1 stack-zhushi-2 [] (concat lst_result ["<"])))
+;               (and (= f \<) (some? (first rs)) (= (first rs) \>) (= (count stack-str) 0) (= (count stack-zhushi-1) 0) (= (count stack-zhushi-2) 0)) (if (> (count lst) 0) (recur (rest rs) stack-str stack-zhushi-1 stack-zhushi-2 [] (concat lst_result [(str/join lst) "<>"])) (recur (rest rs) stack-str stack-zhushi-1 stack-zhushi-2 [] (concat lst_result ["<>"])))
+;
+;               (and (= f \") (= (count stack-str) 0) (= (count stack-zhushi-1) 0) (= (count stack-zhushi-2) 0)) (recur rs (conj stack-str [f "双"]) stack-zhushi-1 stack-zhushi-2 (conj lst f) lst_result)
+;               (and (= f \") (> (count stack-str) 0) (= (count stack-zhushi-1) 0) (= (count stack-zhushi-2) 0)) (let [t (peek stack-str)]
+;                                                                                                                    (cond (= (nth t 1) "双") (recur rs (pop stack-str) stack-zhushi-1 stack-zhushi-2 (conj lst f) lst_result)
+;                                                                                                                          :else
+;                                                                                                                          (recur rs stack-str stack-zhushi-1 stack-zhushi-2 (conj lst f) lst_result))
+;                                                                                                                    )
+;               (and (= f \') (= (count stack-str) 0) (= (count stack-zhushi-1) 0) (= (count stack-zhushi-2) 0)) (recur rs (conj stack-str [f "单"]) stack-zhushi-1 stack-zhushi-2 (conj lst f) lst_result)
+;               (and (= f \') (> (count stack-str) 0) (= (count stack-zhushi-1) 0) (= (count stack-zhushi-2) 0)) (let [t (peek stack-str)]
+;                                                                                                                    (cond (= (nth t 1) "单") (recur rs (pop stack-str) stack-zhushi-1 stack-zhushi-2 (conj lst f) lst_result)
+;                                                                                                                          :else
+;                                                                                                                          (recur rs stack-str stack-zhushi-1 stack-zhushi-2 (conj lst f) lst_result))
+;                                                                                                                    )
+;               (and (= f \newline) (= (count stack-zhushi-2) 0) (= (count stack-zhushi-1) 0)) (recur (concat [\space] rs) stack-str stack-zhushi-1 stack-zhushi-2 lst lst_result)
+;               (and (= f \newline) (> (count stack-zhushi-2) 0) (= (count stack-zhushi-1) 0)) (recur rs stack-str stack-zhushi-1 (pop stack-zhushi-2) [] lst_result)
+;               :else (recur rs stack-str stack-zhushi-1 stack-zhushi-2 (conj lst f) lst_result)
+;               )
+;         (if (> (count lst) 0) (concat lst_result [(str/join lst)]) lst_result)
+;         )))
+
 (defn to-back
-    ([^String line] (to-back line [] [] [] [] []))
+    ([^String line] (to-back line [] [] [] [] (ArrayList.)))
     ([[f & rs] stack-str stack-zhushi-1 stack-zhushi-2 lst lst_result]
      (if (some? f)
-         (cond (and (= f \.) (= (count stack-str) 0) (= (count stack-zhushi-1) 0) (= (count stack-zhushi-2) 0)) (if (> (count lst) 0) (recur rs stack-str stack-zhushi-1 stack-zhushi-2 [] (concat lst_result [(str/join lst) "."])) (recur rs stack-str stack-zhushi-1 stack-zhushi-2 [] (concat lst_result ["."])))
-               (and (= f \;) (= (count stack-str) 0) (= (count stack-zhushi-1) 0) (= (count stack-zhushi-2) 0)) (if (> (count lst) 0) (recur rs stack-str stack-zhushi-1 stack-zhushi-2 [] (concat lst_result [(str/join lst) ";"])) (recur rs stack-str stack-zhushi-1 stack-zhushi-2 [] (concat lst_result [";"])))
-               (and (= f \:) (= (count stack-str) 0) (= (count stack-zhushi-1) 0) (= (count stack-zhushi-2) 0)) (if (> (count lst) 0) (recur rs stack-str stack-zhushi-1 stack-zhushi-2 [] (concat lst_result [(str/join lst) ":"])) (recur rs stack-str stack-zhushi-1 stack-zhushi-2 [] (concat lst_result [":"])))
-               (and (= f \[) (= (count stack-str) 0) (= (count stack-zhushi-1) 0) (= (count stack-zhushi-2) 0)) (if (> (count lst) 0) (recur rs stack-str stack-zhushi-1 stack-zhushi-2 [] (concat lst_result [(str/join lst) "["])) (recur rs stack-str stack-zhushi-1 stack-zhushi-2 [] (concat lst_result ["["])))
-               (and (= f \]) (= (count stack-str) 0) (= (count stack-zhushi-1) 0) (= (count stack-zhushi-2) 0)) (if (> (count lst) 0) (recur rs stack-str stack-zhushi-1 stack-zhushi-2 [] (concat lst_result [(str/join lst) "]"])) (recur rs stack-str stack-zhushi-1 stack-zhushi-2 [] (concat lst_result ["]"])))
-               (and (= f \{) (= (count stack-str) 0) (= (count stack-zhushi-1) 0) (= (count stack-zhushi-2) 0)) (if (> (count lst) 0) (recur rs stack-str stack-zhushi-1 stack-zhushi-2 [] (concat lst_result [(str/join lst) "{"])) (recur rs stack-str stack-zhushi-1 stack-zhushi-2 [] (concat lst_result ["{"])))
-               (and (= f \}) (= (count stack-str) 0) (= (count stack-zhushi-1) 0) (= (count stack-zhushi-2) 0)) (if (> (count lst) 0) (recur rs stack-str stack-zhushi-1 stack-zhushi-2 [] (concat lst_result [(str/join lst) "}"])) (recur rs stack-str stack-zhushi-1 stack-zhushi-2 [] (concat lst_result ["}"])))
+         (cond (and (= f \.) (= (count stack-str) 0) (= (count stack-zhushi-1) 0) (= (count stack-zhushi-2) 0)) (if (> (count lst) 0)
+                                                                                                                    (recur rs stack-str stack-zhushi-1 stack-zhushi-2 [] (doto lst_result (.add (str/join lst)) (.add ".")))
+                                                                                                                    (recur rs stack-str stack-zhushi-1 stack-zhushi-2 [] (doto lst_result (.add "."))))
+               (and (= f \;) (= (count stack-str) 0) (= (count stack-zhushi-1) 0) (= (count stack-zhushi-2) 0)) (if (> (count lst) 0)
+                                                                                                                    (recur rs stack-str stack-zhushi-1 stack-zhushi-2 [] (doto lst_result (.add (str/join lst)) (.add ";")))
+                                                                                                                    (recur rs stack-str stack-zhushi-1 stack-zhushi-2 [] (doto lst_result (.add ";"))))
+               (and (= f \:) (= (count stack-str) 0) (= (count stack-zhushi-1) 0) (= (count stack-zhushi-2) 0)) (if (> (count lst) 0)
+                                                                                                                    (recur rs stack-str stack-zhushi-1 stack-zhushi-2 [] (doto lst_result (.add (str/join lst)) (.add ":")))
+                                                                                                                    (recur rs stack-str stack-zhushi-1 stack-zhushi-2 [] (doto lst_result (.add ":"))))
+               (and (= f \[) (= (count stack-str) 0) (= (count stack-zhushi-1) 0) (= (count stack-zhushi-2) 0)) (if (> (count lst) 0)
+                                                                                                                    (recur rs stack-str stack-zhushi-1 stack-zhushi-2 [] (doto lst_result (.add (str/join lst)) (.add "[")))
+                                                                                                                    (recur rs stack-str stack-zhushi-1 stack-zhushi-2 [] (doto lst_result (.add "["))))
+               (and (= f \]) (= (count stack-str) 0) (= (count stack-zhushi-1) 0) (= (count stack-zhushi-2) 0)) (if (> (count lst) 0)
+                                                                                                                    (recur rs stack-str stack-zhushi-1 stack-zhushi-2 [] (doto lst_result (.add (str/join lst)) (.add "]")))
+                                                                                                                    (recur rs stack-str stack-zhushi-1 stack-zhushi-2 [] (doto lst_result (.add "]"))))
+               (and (= f \{) (= (count stack-str) 0) (= (count stack-zhushi-1) 0) (= (count stack-zhushi-2) 0)) (if (> (count lst) 0)
+                                                                                                                    (recur rs stack-str stack-zhushi-1 stack-zhushi-2 [] (doto lst_result (.add (str/join lst)) (.add "{")))
+                                                                                                                    (recur rs stack-str stack-zhushi-1 stack-zhushi-2 [] (doto lst_result (.add "{"))))
+               (and (= f \}) (= (count stack-str) 0) (= (count stack-zhushi-1) 0) (= (count stack-zhushi-2) 0)) (if (> (count lst) 0)
+                                                                                                                    (recur rs stack-str stack-zhushi-1 stack-zhushi-2 [] (doto lst_result (.add (str/join lst)) (.add "}")))
+                                                                                                                    (recur rs stack-str stack-zhushi-1 stack-zhushi-2 [] (doto lst_result (.add "}"))))
 
-               (and (= f \space) (= (count stack-str) 0) (= (count stack-zhushi-1) 0) (= (count stack-zhushi-2) 0)) (if (> (count lst) 0) (recur rs stack-str stack-zhushi-1 stack-zhushi-2 [] (concat lst_result [(str/join lst)])) (recur rs stack-str stack-zhushi-1 stack-zhushi-2 [] lst_result))
-               (and (= f \() (= (count stack-str) 0) (= (count stack-zhushi-1) 0) (= (count stack-zhushi-2) 0)) (if (> (count lst) 0) (recur rs stack-str stack-zhushi-1 stack-zhushi-2 [] (concat lst_result [(str/join lst) "("])) (recur rs stack-str stack-zhushi-1 stack-zhushi-2 [] (concat lst_result ["("])))
-               (and (= f \)) (= (count stack-str) 0) (= (count stack-zhushi-1) 0) (= (count stack-zhushi-2) 0)) (if (> (count lst) 0) (recur rs stack-str stack-zhushi-1 stack-zhushi-2 [] (concat lst_result [(str/join lst) ")"])) (recur rs stack-str stack-zhushi-1 stack-zhushi-2 [] (concat lst_result [")"])))
+               (and (= f \space) (= (count stack-str) 0) (= (count stack-zhushi-1) 0) (= (count stack-zhushi-2) 0)) (if (> (count lst) 0)
+                                                                                                                        (recur rs stack-str stack-zhushi-1 stack-zhushi-2 [] (doto lst_result (.add (str/join lst))))
+                                                                                                                        (recur rs stack-str stack-zhushi-1 stack-zhushi-2 [] lst_result))
+               (and (= f \() (= (count stack-str) 0) (= (count stack-zhushi-1) 0) (= (count stack-zhushi-2) 0)) (if (> (count lst) 0)
+                                                                                                                    (recur rs stack-str stack-zhushi-1 stack-zhushi-2 [] (doto lst_result (.add (str/join lst)) (.add "(")))
+                                                                                                                    (recur rs stack-str stack-zhushi-1 stack-zhushi-2 [] (doto lst_result (.add "("))))
+               (and (= f \)) (= (count stack-str) 0) (= (count stack-zhushi-1) 0) (= (count stack-zhushi-2) 0)) (if (> (count lst) 0)
+                                                                                                                    (recur rs stack-str stack-zhushi-1 stack-zhushi-2 [] (doto lst_result (.add (str/join lst)) (.add ")")))
+                                                                                                                    (recur rs stack-str stack-zhushi-1 stack-zhushi-2 [] (doto lst_result (.add ")"))))
 
                (and (= f \/) (= (first rs) \*) (= (count stack-str) 0) (= (count stack-zhushi-1) 0) (= (count stack-zhushi-2) 0)) (recur (rest rs) stack-str (conj stack-zhushi-1 1) stack-zhushi-2 lst lst_result)
                (and (= f \*) (= (first rs) \/) (= (count stack-str) 0) (> (count stack-zhushi-1) 0) (= (count stack-zhushi-2) 0)) (recur (rest rs) stack-str (pop stack-zhushi-1) stack-zhushi-2 [] lst_result)
                (and (= f \-) (= (first rs) \-) (= (count stack-str) 0) (= (count stack-zhushi-1) 0) (= (count stack-zhushi-2) 0)) (recur (rest rs) stack-str stack-zhushi-1 (conj stack-zhushi-2 1) lst lst_result)
 
-               (and (= f \,) (= (count stack-str) 0) (= (count stack-zhushi-1) 0) (= (count stack-zhushi-2) 0)) (if (> (count lst) 0) (recur rs stack-str stack-zhushi-1 stack-zhushi-2 [] (concat lst_result [(str/join lst) ","])) (recur rs stack-str stack-zhushi-1 stack-zhushi-2 [] (concat lst_result [","])))
-               (and (= f \+) (= (count stack-str) 0) (= (count stack-zhushi-1) 0) (= (count stack-zhushi-2) 0)) (if (> (count lst) 0) (recur rs stack-str stack-zhushi-1 stack-zhushi-2 [] (concat lst_result [(str/join lst) "+"])) (recur rs stack-str stack-zhushi-1 stack-zhushi-2 [] (concat lst_result ["+"])))
-               (and (= f \-) (not= (first rs) \-) (= (count stack-str) 0) (= (count stack-zhushi-1) 0) (= (count stack-zhushi-2) 0)) (if (> (count lst) 0) (recur rs stack-str stack-zhushi-1 stack-zhushi-2 [] (concat lst_result [(str/join lst) "-"])) (recur rs stack-str stack-zhushi-1 stack-zhushi-2 [] (concat lst_result ["-"])))
-               (and (= f \*) (not= (first rs) \/) (= (count stack-str) 0) (= (count stack-zhushi-1) 0) (= (count stack-zhushi-2) 0)) (if (> (count lst) 0) (recur rs stack-str stack-zhushi-1 stack-zhushi-2 [] (concat lst_result [(str/join lst) "*"])) (recur rs stack-str stack-zhushi-1 stack-zhushi-2 [] (concat lst_result ["*"])))
-               (and (= f \/) (= (count stack-str) 0) (= (count stack-zhushi-1) 0) (= (count stack-zhushi-2) 0)) (if (> (count lst) 0) (recur rs stack-str stack-zhushi-1 stack-zhushi-2 [] (concat lst_result [(str/join lst) "/"])) (recur rs stack-str stack-zhushi-1 stack-zhushi-2 [] (concat lst_result ["/"])))
-               (and (= f \=) (= (count stack-str) 0) (= (count stack-zhushi-1) 0) (= (count stack-zhushi-2) 0)) (if (> (count lst) 0) (recur rs stack-str stack-zhushi-1 stack-zhushi-2 [] (concat lst_result [(str/join lst) "="])) (recur rs stack-str stack-zhushi-1 stack-zhushi-2 [] (concat lst_result ["="])))
-               (and (= f \>) (some? (first rs)) (= (first rs) \=) (= (count stack-str) 0) (= (count stack-zhushi-1) 0) (= (count stack-zhushi-2) 0)) (if (> (count lst) 0) (recur (rest rs) stack-str stack-zhushi-1 stack-zhushi-2 [] (concat lst_result [(str/join lst) ">="])) (recur (rest rs) stack-str stack-zhushi-1 stack-zhushi-2 [] (concat lst_result [">="])))
-               (and (= f \>) (some? (first rs)) (not= (first rs) \=) (= (count stack-str) 0) (= (count stack-zhushi-1) 0) (= (count stack-zhushi-2) 0)) (if (> (count lst) 0) (recur rs stack-str stack-zhushi-1 stack-zhushi-2 [] (concat lst_result [(str/join lst) ">"])) (recur rs stack-str stack-zhushi-1 stack-zhushi-2 [] (concat lst_result [">"])))
-               (and (= f \<) (some? (first rs)) (= (first rs) \=) (= (count stack-str) 0) (= (count stack-zhushi-1) 0) (= (count stack-zhushi-2) 0)) (if (> (count lst) 0) (recur (rest rs) stack-str stack-zhushi-1 stack-zhushi-2 [] (concat lst_result [(str/join lst) "<="])) (recur (rest rs) stack-str stack-zhushi-1 stack-zhushi-2 [] (concat lst_result ["<="])))
-               (and (= f \<) (some? (first rs)) (not= (first rs) \=) (not= (first rs) \>) (= (count stack-str) 0) (= (count stack-zhushi-1) 0) (= (count stack-zhushi-2) 0)) (if (> (count lst) 0) (recur rs stack-str stack-zhushi-1 stack-zhushi-2 [] (concat lst_result [(str/join lst) "<"])) (recur rs stack-str stack-zhushi-1 stack-zhushi-2 [] (concat lst_result ["<"])))
-               (and (= f \<) (some? (first rs)) (= (first rs) \>) (= (count stack-str) 0) (= (count stack-zhushi-1) 0) (= (count stack-zhushi-2) 0)) (if (> (count lst) 0) (recur (rest rs) stack-str stack-zhushi-1 stack-zhushi-2 [] (concat lst_result [(str/join lst) "<>"])) (recur (rest rs) stack-str stack-zhushi-1 stack-zhushi-2 [] (concat lst_result ["<>"])))
+               (and (= f \,) (= (count stack-str) 0) (= (count stack-zhushi-1) 0) (= (count stack-zhushi-2) 0)) (if (> (count lst) 0)
+                                                                                                                    (recur rs stack-str stack-zhushi-1 stack-zhushi-2 [] (doto lst_result (.add (str/join lst)) (.add ",")))
+                                                                                                                    (recur rs stack-str stack-zhushi-1 stack-zhushi-2 [] (doto lst_result (.add ","))))
+               (and (= f \+) (= (count stack-str) 0) (= (count stack-zhushi-1) 0) (= (count stack-zhushi-2) 0)) (if (> (count lst) 0)
+                                                                                                                    (recur rs stack-str stack-zhushi-1 stack-zhushi-2 [] (doto lst_result (.add (str/join lst)) (.add "+")))
+                                                                                                                    (recur rs stack-str stack-zhushi-1 stack-zhushi-2 [] (doto lst_result (.add "+"))))
+               (and (= f \-) (not= (first rs) \-) (= (count stack-str) 0) (= (count stack-zhushi-1) 0) (= (count stack-zhushi-2) 0)) (if (> (count lst) 0)
+                                                                                                                                         (recur rs stack-str stack-zhushi-1 stack-zhushi-2 [] (doto lst_result (.add (str/join lst)) (.add "-")))
+                                                                                                                                         (recur rs stack-str stack-zhushi-1 stack-zhushi-2 [] (doto lst_result (.add "-"))))
+               (and (= f \*) (not= (first rs) \/) (= (count stack-str) 0) (= (count stack-zhushi-1) 0) (= (count stack-zhushi-2) 0)) (if (> (count lst) 0)
+                                                                                                                                         (recur rs stack-str stack-zhushi-1 stack-zhushi-2 [] (doto lst_result (.add (str/join lst)) (.add "*")))
+                                                                                                                                         (recur rs stack-str stack-zhushi-1 stack-zhushi-2 [] (doto lst_result (.add "*"))))
+               (and (= f \/) (= (count stack-str) 0) (= (count stack-zhushi-1) 0) (= (count stack-zhushi-2) 0)) (if (> (count lst) 0)
+                                                                                                                    (recur rs stack-str stack-zhushi-1 stack-zhushi-2 [] (doto lst_result (.add (str/join lst)) (.add "/")))
+                                                                                                                    (recur rs stack-str stack-zhushi-1 stack-zhushi-2 [] (doto lst_result (.add "/"))))
+               (and (= f \=) (= (count stack-str) 0) (= (count stack-zhushi-1) 0) (= (count stack-zhushi-2) 0)) (if (> (count lst) 0)
+                                                                                                                    (recur rs stack-str stack-zhushi-1 stack-zhushi-2 [] (doto lst_result (.add (str/join lst)) (.add "=")))
+                                                                                                                    (recur rs stack-str stack-zhushi-1 stack-zhushi-2 [] (doto lst_result (.add "="))))
+               (and (= f \>) (some? (first rs)) (= (first rs) \=) (= (count stack-str) 0) (= (count stack-zhushi-1) 0) (= (count stack-zhushi-2) 0)) (if (> (count lst) 0)
+                                                                                                                                                         (recur (rest rs) stack-str stack-zhushi-1 stack-zhushi-2 [] (doto lst_result (.add (str/join lst)) (.add ">=")))
+                                                                                                                                                         (recur (rest rs) stack-str stack-zhushi-1 stack-zhushi-2 [] (doto lst_result (.add ">="))))
+               (and (= f \>) (some? (first rs)) (not= (first rs) \=) (= (count stack-str) 0) (= (count stack-zhushi-1) 0) (= (count stack-zhushi-2) 0)) (if (> (count lst) 0)
+                                                                                                                                                            (recur rs stack-str stack-zhushi-1 stack-zhushi-2 [] (doto lst_result (.add (str/join lst)) (.add ">")))
+                                                                                                                                                            (recur rs stack-str stack-zhushi-1 stack-zhushi-2 [] (doto lst_result (.add ">"))))
+               (and (= f \<) (some? (first rs)) (= (first rs) \=) (= (count stack-str) 0) (= (count stack-zhushi-1) 0) (= (count stack-zhushi-2) 0)) (if (> (count lst) 0)
+                                                                                                                                                         (recur (rest rs) stack-str stack-zhushi-1 stack-zhushi-2 [] (doto lst_result (.add (str/join lst)) (.add "<=")))
+                                                                                                                                                         (recur (rest rs) stack-str stack-zhushi-1 stack-zhushi-2 [] (doto lst_result (.add "<="))))
+               (and (= f \<) (some? (first rs)) (not= (first rs) \=) (not= (first rs) \>) (= (count stack-str) 0) (= (count stack-zhushi-1) 0) (= (count stack-zhushi-2) 0)) (if (> (count lst) 0)
+                                                                                                                                                                                 (recur rs stack-str stack-zhushi-1 stack-zhushi-2 [] (doto lst_result (.add (str/join lst)) (.add "<")))
+                                                                                                                                                                                 (recur rs stack-str stack-zhushi-1 stack-zhushi-2 [] (doto lst_result (.add "<"))))
+               (and (= f \<) (some? (first rs)) (= (first rs) \>) (= (count stack-str) 0) (= (count stack-zhushi-1) 0) (= (count stack-zhushi-2) 0)) (if (> (count lst) 0)
+                                                                                                                                                         (recur (rest rs) stack-str stack-zhushi-1 stack-zhushi-2 [] (doto lst_result (.add (str/join lst)) (.add "<>")))
+                                                                                                                                                         (recur (rest rs) stack-str stack-zhushi-1 stack-zhushi-2 [] (doto lst_result (.add "<>"))))
 
                (and (= f \") (= (count stack-str) 0) (= (count stack-zhushi-1) 0) (= (count stack-zhushi-2) 0)) (recur rs (conj stack-str [f "双"]) stack-zhushi-1 stack-zhushi-2 (conj lst f) lst_result)
                (and (= f \") (> (count stack-str) 0) (= (count stack-zhushi-1) 0) (= (count stack-zhushi-2) 0)) (let [t (peek stack-str)]
@@ -1316,7 +1409,9 @@
                (and (= f \newline) (> (count stack-zhushi-2) 0) (= (count stack-zhushi-1) 0)) (recur rs stack-str stack-zhushi-1 (pop stack-zhushi-2) [] lst_result)
                :else (recur rs stack-str stack-zhushi-1 stack-zhushi-2 (conj lst f) lst_result)
                )
-         (if (> (count lst) 0) (concat lst_result [(str/join lst)]) lst_result)
+         (if (> (count lst) 0)
+             (doto lst_result (.add (str/join lst)))
+             lst_result)
          )))
 
 (defn -lineToList [^String line]
@@ -1327,16 +1422,16 @@
 ; lst 记录 query-item
 (defn query-items-line
     ([lst] (let [{query-items :query-items rs-lst :rs-lst} (query-items-line lst [] [])]
-               (if (some? query-items) {:query-items (concat [(to-lazy (rest (first query-items)))] (rest query-items)) :rs-lst rs-lst})))
+               (if (some? query-items) {:query-items (concat [(rest (first query-items))] (rest query-items)) :rs-lst rs-lst})))
     ([[f & rs] stack lst]
      (if (some? f)
          (cond (and (= f ",") (= (count stack) 0)) (if (> (count lst) 0)
                                                        (let [{query-items :query-items rs-lst :rs-lst} (query-items-line rs stack [])]
-                                                           {:query-items (concat [(to-lazy lst) ","] query-items) :rs-lst rs-lst})
+                                                           {:query-items (concat [lst ","] query-items) :rs-lst rs-lst})
                                                        )
 
                (and (is-eq? f "from") (= (count stack) 0)) (if (> (count lst) 0)
-                                                               {:query-items [(to-lazy lst)] :rs-lst rs}
+                                                               {:query-items [lst] :rs-lst rs}
                                                                )
                (= f "(") (query-items-line rs (conj stack f) (conj lst f))
                (= f ")") (if (> (count stack) 0) (query-items-line rs (pop stack) (conj lst f)))
@@ -1347,21 +1442,21 @@
 ; 获取 table 的定义
 (defn tables-items-line
     ([lst] (let [m (tables-items-line lst [] [])]
-               (if (some? m) m {:table-items [(to-lazy lst)] :rs-lst nil :my-type nil})))
+               (if (some? m) m {:table-items [lst] :rs-lst nil :my-type nil})))
     ([[f & rs] stack lst]
      (if (some? f)
          (cond (and (= f ",") (= (count stack) 0)) (if (> (count lst) 0)
                                                        (let [table_items_obj (tables-items-line rs stack [])]
                                                            (if (nil? table_items_obj)
-                                                               {:table-items (concat [(to-lazy lst) ","] [rs]) :rs-lst nil :my-type nil}
-                                                               {:table-items (concat [(to-lazy lst) ","] (get table_items_obj :table-items)) :rs-lst (get table_items_obj :rs-lst) :my-type (get table_items_obj :my-type)})))
+                                                               {:table-items (concat [lst ","] [rs]) :rs-lst nil :my-type nil}
+                                                               {:table-items (concat [lst ","] (get table_items_obj :table-items)) :rs-lst (get table_items_obj :rs-lst) :my-type (get table_items_obj :my-type)})))
 
                (and (is-eq? f "where") (= (count stack) 0)) (if (> (count lst) 0)
-                                                                {:table-items [(to-lazy lst)] :rs-lst rs :my-type "where"}
+                                                                {:table-items [lst] :rs-lst rs :my-type "where"}
                                                                 )
-               (and (is-eq? f "order") (is-eq? (first rs) "by") (= (count stack) 0)) (if (> (count lst) 0) {:table-items [(to-lazy lst)] :rs-lst (rest rs) :my-type "order"})
-               (and (is-eq? f "group") (is-eq? (first rs) "by") (= (count stack) 0)) (if (> (count lst) 0) {:table-items [(to-lazy lst)] :rs-lst (rest rs) :my-type "group"})
-               (and (is-eq? f "limit") (= (count stack) 0)) (if (> (count lst) 0) {:table-items [(to-lazy lst)] :rs-lst rs :my-type "limit"})
+               (and (is-eq? f "order") (is-eq? (first rs) "by") (= (count stack) 0)) (if (> (count lst) 0) {:table-items [lst] :rs-lst (rest rs) :my-type "order"})
+               (and (is-eq? f "group") (is-eq? (first rs) "by") (= (count stack) 0)) (if (> (count lst) 0) {:table-items [lst] :rs-lst (rest rs) :my-type "group"})
+               (and (is-eq? f "limit") (= (count stack) 0)) (if (> (count lst) 0) {:table-items [lst] :rs-lst rs :my-type "limit"})
                (= f "(") (tables-items-line rs (conj stack f) (conj lst f))
                (= f ")") (if (> (count stack) 0) (tables-items-line rs (pop stack) (conj lst f)))
                :else
@@ -1374,15 +1469,15 @@
     ([lst] (where-items-line lst [] []))
     ([[f & rs] stack lst]
      (if (some? f)
-         (cond (and (is-eq? f "group") (some? (first rs)) (is-eq? (first rs) "by") (= (count stack) 0)) (if (> (count lst) 0) {:where-items (to-lazy lst) :rs-lst (concat ["group"] rs)} (throw (Exception. "where 语句后不能直接跟 group by")))
-               (and (is-eq? f "order") (some? (first rs)) (is-eq? (first rs) "by") (= (count stack) 0)) (if (> (count lst) 0) {:where-items (to-lazy lst) :rs-lst (concat ["order"] rs)} (throw (Exception. "where 语句后不能直接跟 order by")))
-               (and (is-eq? f "limit") (= (count stack) 0)) (if (> (count lst) 0) {:where-items (to-lazy lst) :rs-lst (concat ["limit"] rs)} (throw (Exception. "where 语句后不能直接跟 limit")))
+         (cond (and (is-eq? f "group") (some? (first rs)) (is-eq? (first rs) "by") (= (count stack) 0)) (if (> (count lst) 0) {:where-items lst :rs-lst (concat ["group"] rs)} (throw (Exception. "where 语句后不能直接跟 group by")))
+               (and (is-eq? f "order") (some? (first rs)) (is-eq? (first rs) "by") (= (count stack) 0)) (if (> (count lst) 0) {:where-items lst :rs-lst (concat ["order"] rs)} (throw (Exception. "where 语句后不能直接跟 order by")))
+               (and (is-eq? f "limit") (= (count stack) 0)) (if (> (count lst) 0) {:where-items lst :rs-lst (concat ["limit"] rs)} (throw (Exception. "where 语句后不能直接跟 limit")))
                (= f "(") (recur rs (conj stack f) (conj lst f))
                (= f ")") (if (> (count stack) 0) (recur rs (pop stack) (conj lst f)))
                :else
                (recur rs stack (conj lst f))
                )
-         (if (> (count lst) 0) {:where-items (to-lazy lst) :rs-lst []}))))
+         (if (> (count lst) 0) {:where-items lst :rs-lst []}))))
 
 
 ; 获取 group by
@@ -1391,7 +1486,7 @@
     ([lst] (group-by-items-line lst [] []))
     ([[f & rs] stack lst]
      (if (some? f)
-         (cond (and (is-eq? f "having") (= (count stack) 0) (> (count lst) 0)) {:group-by (to-lazy lst) :having true :rs-lst rs}
+         (cond (and (is-eq? f "having") (= (count stack) 0) (> (count lst) 0)) {:group-by lst :having true :rs-lst rs}
                (= f "(") (recur rs (conj stack f) (conj lst f))
                (= f ")") (if (> (count stack) 0) (recur rs (pop stack) (conj lst f)))
                :else
@@ -1404,15 +1499,15 @@
     ([lst] (group-by-having-items-line lst [] []))
     ([[f & rs] stack lst]
      (if (some? f)
-         (cond (and (is-eq? f "order") (some? (first rs)) (is-eq? (first rs) "by") (= (count stack) 0)) (if (> (count lst) 0) {:group-having (to-lazy lst) :rs-lst (concat ["order"] rs)})
-               (and (is-eq? f "limit") (= (count stack) 0)) (if (> (count lst) 0) {:group-having (to-lazy lst) :rs-lst (concat ["limit"] rs)})
+         (cond (and (is-eq? f "order") (some? (first rs)) (is-eq? (first rs) "by") (= (count stack) 0)) (if (> (count lst) 0) {:group-having lst :rs-lst (concat ["order"] rs)})
+               (and (is-eq? f "limit") (= (count stack) 0)) (if (> (count lst) 0) {:group-having lst :rs-lst (concat ["limit"] rs)})
                (and (is-eq? f "limit") (= (count stack) 0)) (if (= (count lst) 0) {:group-having nil :rs-lst (concat ["limit"] rs)})
                (= f "(") (recur rs (conj stack f) (conj lst f))
                (= f ")") (if (> (count stack) 0) (recur rs (pop stack) (conj lst f)))
                :else
                (recur rs stack (conj lst f))
                )
-         (if (and (> (count lst) 0) (= (count stack) 0)) {:group-having (to-lazy lst) :rs-lst []})
+         (if (and (> (count lst) 0) (= (count stack) 0)) {:group-having lst :rs-lst []})
          )))
 
 ; group by
@@ -1431,13 +1526,13 @@
     ([lst] (order-by-items-line lst [] []))
     ([[f & rs] stack lst]
      (if (some? f)
-         (cond (and (is-eq? f "limit") (= (count stack) 0)) (if (> (count lst) 0) {:order (to-lazy lst) :rs-lst (concat ["limit"] rs)})
+         (cond (and (is-eq? f "limit") (= (count stack) 0)) (if (> (count lst) 0) {:order lst :rs-lst (concat ["limit"] rs)})
                (= f "(") (order-by-items-line rs (conj stack f) (conj lst f))
                (= f ")") (if (> (count stack) 0) (order-by-items-line rs (pop stack) (conj lst f)))
                :else
                (order-by-items-line rs stack (conj lst f))
                )
-         (if (and (> (count lst) 0) (= (count stack) 0)) {:order (to-lazy lst) :rs-lst []})
+         (if (and (> (count lst) 0) (= (count stack) 0)) {:order lst :rs-lst []})
          )))
 
 (defn my-comma

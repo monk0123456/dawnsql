@@ -179,7 +179,7 @@
              (conj lst stack-lst)
              lst))))
 
-(defn sql-to-ast [^clojure.lang.LazySeq sql-lst]
+(defn sql-to-ast [sql-lst]
     (letfn [(get-items
                 ([lst] (get-items lst [] nil [] []))
                 ([[f & r] stack mid-small stack-lst lst]
@@ -456,7 +456,7 @@
                                     (if-not (nil? m)
                                         m
                                         (eliminate-parentheses (my-lexical/get-contain-lst lst))))))]
-                    (when-let [m (is-operate-fn? (get-lazy lst))]
+                    (when-let [m (is-operate-fn? lst)]
                         (let [ast-m (get-my-sql-to-ast m)]
                             (if (is-sql-obj? ast-m)
                                 {:parenthesis ast-m}
@@ -832,7 +832,8 @@
         (if-not (my-lexical/is-eq? (first sql-lst) "select")
             (get-token sql-lst)
             (when-let [m (my-lexical/sql-union sql-lst)]
-                (map to-ast m)))))
+                (map to-ast m)))
+        ))
 
 (defn to-lst [ast]
     (cond (map? ast) (loop [[f & r] (keys ast) my-ast (Hashtable.)]
