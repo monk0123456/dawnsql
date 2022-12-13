@@ -1471,7 +1471,7 @@
      (if (some? f)
          (cond (and (is-eq? f "group") (some? (first rs)) (is-eq? (first rs) "by") (= (count stack) 0)) (if (> (count lst) 0) {:where-items lst :rs-lst (concat ["group"] rs)} (throw (Exception. "where 语句后不能直接跟 group by")))
                (and (is-eq? f "order") (some? (first rs)) (is-eq? (first rs) "by") (= (count stack) 0)) (if (> (count lst) 0) {:where-items lst :rs-lst (concat ["order"] rs)} (throw (Exception. "where 语句后不能直接跟 order by")))
-               (and (is-eq? f "limit") (= (count stack) 0)) (if (> (count lst) 0) {:where-items lst :rs-lst (concat ["limit"] rs)} (throw (Exception. "where 语句后不能直接跟 limit")))
+               (and (is-eq? f "limit") (= (count stack) 0)) (if (> (count lst) 0) {:where-items lst :rs-lst rs} (throw (Exception. "where 语句后不能直接跟 limit")))
                (= f "(") (recur rs (conj stack f) (conj lst f))
                (= f ")") (if (> (count stack) 0) (recur rs (pop stack) (conj lst f)))
                :else
@@ -1500,8 +1500,8 @@
     ([[f & rs] stack lst]
      (if (some? f)
          (cond (and (is-eq? f "order") (some? (first rs)) (is-eq? (first rs) "by") (= (count stack) 0)) (if (> (count lst) 0) {:group-having lst :rs-lst (concat ["order"] rs)})
-               (and (is-eq? f "limit") (= (count stack) 0)) (if (> (count lst) 0) {:group-having lst :rs-lst (concat ["limit"] rs)})
-               (and (is-eq? f "limit") (= (count stack) 0)) (if (= (count lst) 0) {:group-having nil :rs-lst (concat ["limit"] rs)})
+               (and (is-eq? f "limit") (= (count stack) 0)) (if (> (count lst) 0) {:group-having lst :rs-lst rs})
+               (and (is-eq? f "limit") (= (count stack) 0)) (if (= (count lst) 0) {:group-having nil :rs-lst rs})
                (= f "(") (recur rs (conj stack f) (conj lst f))
                (= f ")") (if (> (count stack) 0) (recur rs (pop stack) (conj lst f)))
                :else
@@ -1526,7 +1526,7 @@
     ([lst] (order-by-items-line lst [] []))
     ([[f & rs] stack lst]
      (if (some? f)
-         (cond (and (is-eq? f "limit") (= (count stack) 0)) (if (> (count lst) 0) {:order lst :rs-lst (concat ["limit"] rs)})
+         (cond (and (is-eq? f "limit") (= (count stack) 0)) (if (> (count lst) 0) {:order lst :rs-lst rs})
                (= f "(") (order-by-items-line rs (conj stack f) (conj lst f))
                (= f ")") (if (> (count stack) 0) (order-by-items-line rs (pop stack) (conj lst f)))
                :else
