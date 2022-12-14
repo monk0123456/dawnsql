@@ -563,18 +563,18 @@
                                         (let [where-item-line-m (get-where-item-line lst)]
                                             (if (is-true? where-item-line-m)
                                                 (map get-token where-item-line-m)
-                                                (if-let [fn-m (func-fn lst)]
-                                                    fn-m
-                                                    (if-let [oprate-m (operation lst)]
-                                                        oprate-m
-                                                        (if-let [p-m (parenthesis lst)]
-                                                            p-m
-                                                            (let [not-exists-m (parenthesis (rest (rest lst)))]
-                                                                (if (and (my-lexical/is-eq? (first lst) "not") (my-lexical/is-eq? (second lst) "exists") (some? not-exists-m))
-                                                                    {:exists "not exists" :select_sql not-exists-m}
-                                                                    (let [exists-m (parenthesis (rest lst))]
-                                                                        (if (and (my-lexical/is-eq? (first lst) "exists") (some? exists-m))
-                                                                            {:exists "exists" :select_sql exists-m}
+                                                (let [exists-m (parenthesis (rest lst))]
+                                                    (if (and (my-lexical/is-eq? (first lst) "exists") (some? exists-m))
+                                                        {:exists "exists" :select_sql exists-m}
+                                                        (if-let [fn-m (func-fn lst)]
+                                                            fn-m
+                                                            (if-let [oprate-m (operation lst)]
+                                                                oprate-m
+                                                                (if-let [p-m (parenthesis lst)]
+                                                                    p-m
+                                                                    (let [not-exists-m (parenthesis (rest (rest lst)))]
+                                                                        (if (and (my-lexical/is-eq? (first lst) "not") (my-lexical/is-eq? (second lst) "exists") (some? not-exists-m))
+                                                                            {:exists "not exists" :select_sql not-exists-m}
                                                                             (if (= (first lst) "-")
                                                                                 (let [fu-m-1 (get-token (rest lst))]
                                                                                     {:parenthesis (conj [{:table_alias "", :item_name "0", :item_type "", :java_item_type java.lang.Integer, :const true} {:operation_symbol "-"}] fu-m-1)})
@@ -582,8 +582,7 @@
                                                                                     [{:keyword "distinct"} (get-token (rest lst))]
                                                                                     (if-let [ds-m (link-func lst)]
                                                                                         ds-m
-                                                                                        (smart-item-tokens lst))))
-                                                                            )))))))
+                                                                                        (smart-item-tokens lst)))))))))))
                                                 )))))
                             )
                         ;(cond (and (= (count lst) 1) (string? (first lst))) (get-token-line (first lst))
@@ -1031,6 +1030,7 @@
                         (contains? m :exists) (concat [(get m :exists) "("] (token-to-sql ignite group_id (get (get m :select_sql) :parenthesis)) [")"])
                         (contains? m :parenthesis) (concat ["("] (token-to-sql ignite group_id (get m :parenthesis)) [")"])
                         (contains? m :case-when) (case-when-line ignite group_id m)
+                        (contains? m :exists_symbol) {:sql (get m :exists_symbol) :args nil}
                         :else
                         (throw (Exception. "select 语句错误！请仔细检查！"))
                         )))

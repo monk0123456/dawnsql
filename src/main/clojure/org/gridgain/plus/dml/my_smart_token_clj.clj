@@ -170,7 +170,9 @@
                 ;                                  (format "(%s (my-lexical/get-value %s))" (my-lexical/smart-func method-name) let-name))
                 ;                              )
                 ; 系统函数
-                (contains? #{"first" "rest" "next" "second" "last"} (str/lower-case func-name)) (format "(%s %s)" (str/lower-case func-name) (get-lst-ps-vs ignite group_id lst_ps my-context))
+                (contains? #{"next" "hasnext"} (str/lower-case func-name)) (format "(my-lexical/my-%s %s)" (str/lower-case func-name) (get-lst-ps-vs ignite group_id lst_ps my-context))
+                ; 系统函数
+                (contains? #{"first" "rest" "second" "last"} (str/lower-case func-name)) (format "(%s %s)" (str/lower-case func-name) (get-lst-ps-vs ignite group_id lst_ps my-context))
                 ; inner function
                 (get-inner-function-context func-name my-context) (format "(%s %s)" func-name (get-lst-ps-vs ignite group_id lst_ps my-context))
                 (my-lexical/is-eq? func-name "query_sql") (cond (= (count lst_ps) 1) (format "(my-smart-db/query_sql ignite group_id %s nil)" (get-lst-ps-vs ignite group_id lst_ps my-context))

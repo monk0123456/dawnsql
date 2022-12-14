@@ -309,6 +309,7 @@
                                                            {:sql (concat ["("] sql [")" " " (-> m :alias)]) :args args}
                                                            {:sql (concat ["("] sql [")"]) :args args}))
                         (contains? m :case-when) (case-when-line ignite group_id dic-args m)
+                        (contains? m :exists_symbol) {:sql (get m :exists_symbol) :args nil}
                         :else
                         (throw (Exception. "select 语句错误！请仔细检查！"))
                         )))

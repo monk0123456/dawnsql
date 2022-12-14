@@ -1471,7 +1471,7 @@
      (if (some? f)
          (cond (and (is-eq? f "group") (some? (first rs)) (is-eq? (first rs) "by") (= (count stack) 0)) (if (> (count lst) 0) {:where-items lst :rs-lst (concat ["group"] rs)} (throw (Exception. "where 语句后不能直接跟 group by")))
                (and (is-eq? f "order") (some? (first rs)) (is-eq? (first rs) "by") (= (count stack) 0)) (if (> (count lst) 0) {:where-items lst :rs-lst (concat ["order"] rs)} (throw (Exception. "where 语句后不能直接跟 order by")))
-               (and (is-eq? f "limit") (= (count stack) 0)) (if (> (count lst) 0) {:where-items lst :rs-lst rs} (throw (Exception. "where 语句后不能直接跟 limit")))
+               (and (is-eq? f "limit") (= (count stack) 0)) (if (> (count lst) 0) {:where-items lst :rs-lst (concat ["limit"] rs)} (throw (Exception. "where 语句后不能直接跟 limit")))
                (= f "(") (recur rs (conj stack f) (conj lst f))
                (= f ")") (if (> (count stack) 0) (recur rs (pop stack) (conj lst f)))
                :else
@@ -1500,8 +1500,8 @@
     ([[f & rs] stack lst]
      (if (some? f)
          (cond (and (is-eq? f "order") (some? (first rs)) (is-eq? (first rs) "by") (= (count stack) 0)) (if (> (count lst) 0) {:group-having lst :rs-lst (concat ["order"] rs)})
-               (and (is-eq? f "limit") (= (count stack) 0)) (if (> (count lst) 0) {:group-having lst :rs-lst rs})
-               (and (is-eq? f "limit") (= (count stack) 0)) (if (= (count lst) 0) {:group-having nil :rs-lst rs})
+               (and (is-eq? f "limit") (= (count stack) 0)) (if (> (count lst) 0) {:group-having lst :rs-lst (concat ["limit"] rs)})
+               (and (is-eq? f "limit") (= (count stack) 0)) (if (= (count lst) 0) {:group-having nil :rs-lst (concat ["limit"] rs)})
                (= f "(") (recur rs (conj stack f) (conj lst f))
                (= f ")") (if (> (count stack) 0) (recur rs (pop stack) (conj lst f)))
                :else
@@ -1526,7 +1526,7 @@
     ([lst] (order-by-items-line lst [] []))
     ([[f & rs] stack lst]
      (if (some? f)
-         (cond (and (is-eq? f "limit") (= (count stack) 0)) (if (> (count lst) 0) {:order lst :rs-lst rs})
+         (cond (and (is-eq? f "limit") (= (count stack) 0)) (if (> (count lst) 0) {:order lst :rs-lst (concat ["limit"] rs)})
                (= f "(") (order-by-items-line rs (conj stack f) (conj lst f))
                (= f ")") (if (> (count stack) 0) (order-by-items-line rs (pop stack) (conj lst f)))
                :else
@@ -1645,7 +1645,7 @@
                                                     {:query-items query-items :table-items table-items :where-items where-items}))
                         (= my-type "order") (let [{order :order rs-lst :rs-lst} (order-by-items-line rs-lst-tables)]
                                                 (if (> (count rs-lst) 0)
-                                                    {:query-items query-items :table-items table-items :where-items nil :group-by nil :having nil :order-by order :limit rs-lst}
+                                                    {:query-items query-items :table-items table-items :where-items nil :group-by nil :having nil :order-by order :limit (rest rs-lst)}
                                                     {:query-items query-items :table-items table-items :where-items nil :group-by nil :having nil :order-by order :limit nil}))
                         (= my-type "group") (let [{group-by :group-by having :having rs-lst :rs-lst} (sql-group-by rs-lst-tables)]
                                                 (let [m (where-extend-line rs-lst)]
@@ -1825,7 +1825,19 @@
               (throw (Exception. "单用户组只能使用 public")))
         m))
 
+(defn my-hasnext [m_0]
+    (let [m (get-value m_0)]
+        (if (instance? java.util.Iterator m)
+            (.hasNext m)
+            (throw (Exception. "只有 Iterator 类型才能用 hasNext 方法！")))))
 
+(defn my-next [m_0]
+    (let [m (get-value m_0)]
+        (cond (instance? java.util.Iterator m) (.next m)
+              (is-seq? m) (next m)
+              :else
+              (throw (Exception. "数据类型不是序列或者 Iterator"))
+              )))
 
 
 
