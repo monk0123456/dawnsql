@@ -289,7 +289,10 @@
                         (contains? m :func-link) (func-link-to-line ignite group_id dic-args m)
                         (contains? m :and_or_symbol) {:sql (get m :and_or_symbol) :args nil} ;(get m :and_or_symbol)
                         (contains? m :keyword) {:sql (get m :keyword) :args nil} ;(get m :keyword)
-                        (contains? m :operation) (get-map-token-to-sql (map (partial token-to-sql ignite group_id dic-args) (get m :operation)))
+                        (contains? m :operation) (let [{sql :sql args :args} (get-map-token-to-sql (map (partial token-to-sql ignite group_id dic-args) (get m :operation)))]
+                                                     (if (contains? m :alias)
+                                                         {:sql (concat sql [(-> m :alias)]) :args args}
+                                                         {sql :sql args :args}))
                         (contains? m :comparison_symbol) {:sql (get m :comparison_symbol) :args nil} ; (get m :comparison_symbol)
                         (contains? m :in_symbol) {:sql (get m :in_symbol) :args nil} ; (get m :in_symbol)
                         (contains? m :operation_symbol) {:sql (get m :operation_symbol) :args nil} ; (get m :operation_symbol)
