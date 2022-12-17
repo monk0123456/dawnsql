@@ -16,6 +16,8 @@
                     mode VARCHAR,
                     -- 最大的量
                     maxSize int,
+                    -- 分区备份数量
+                    backups int,
                     PRIMARY KEY (schema_name, table_name)
                     ) WITH \"template=MyMeta_template,cache_name=my_caches,KEY_TYPE=cn.plus.model.ddl.MyCachePK,VALUE_TYPE=cn.plus.model.ddl.MyCaches,ATOMICITY=TRANSACTIONAL,cache_group=my_meta\";
 

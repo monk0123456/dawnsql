@@ -10,14 +10,16 @@ public class MyCaches implements Serializable {
     private Boolean is_cache;
     private String mode;
     private Integer maxSize;
+    private Integer backups;
 
-    public MyCaches(final String schema_name, final String table_name, final Boolean is_cache, final String mode, final Integer maxSize)
+    public MyCaches(final String schema_name, final String table_name, final Boolean is_cache, final String mode, final Integer maxSize, final Integer backups)
     {
         this.schema_name = schema_name != null? schema_name.toLowerCase(): schema_name;
         this.table_name = table_name != null? table_name.toLowerCase(): table_name;
         this.is_cache = is_cache;
         this.mode = mode != null? mode.toLowerCase(): mode;
         this.maxSize = maxSize;
+        this.backups = backups;
     }
 
     public MyCaches()
@@ -63,6 +65,14 @@ public class MyCaches implements Serializable {
         this.maxSize = maxSize;
     }
 
+    public Integer getBackups() {
+        return backups;
+    }
+
+    public void setBackups(Integer backups) {
+        this.backups = backups;
+    }
+
     @Override
     public String toString() {
         return "MyCaches{" +
@@ -71,6 +81,44 @@ public class MyCaches implements Serializable {
                 ", is_cache=" + is_cache +
                 ", mode='" + mode + '\'' +
                 ", maxSize=" + maxSize +
+                ", backups=" + backups +
                 '}';
     }
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

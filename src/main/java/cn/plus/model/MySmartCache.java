@@ -12,23 +12,26 @@ public class MySmartCache implements Serializable {
     private Boolean is_cache;
     private String mode;
     private Integer maxSize;
+    private Integer backups;
     private CacheDllType cacheDllType;
 
-    public MySmartCache(final String table_name, final Boolean is_cache, final String mode, final Integer maxSize, final CacheDllType cacheDllType)
+    public MySmartCache(final String table_name, final Boolean is_cache, final String mode, final Integer maxSize, final Integer backups, final CacheDllType cacheDllType)
     {
         this.table_name = table_name;
         this.is_cache = is_cache;
         this.mode = mode;
         this.maxSize = maxSize;
+        this.backups = backups;
         this.cacheDllType = cacheDllType;
     }
 
-    public MySmartCache(final String table_name, final Boolean is_cache, final String mode, final Integer maxSize)
+    public MySmartCache(final String table_name, final Boolean is_cache, final String mode, final Integer maxSize, final Integer backups)
     {
         this.table_name = table_name;
         this.is_cache = is_cache;
         this.mode = mode;
         this.maxSize = maxSize;
+        this.backups = backups;
     }
 
     public MySmartCache()
@@ -74,6 +77,14 @@ public class MySmartCache implements Serializable {
         this.maxSize = maxSize;
     }
 
+    public Integer getBackups() {
+        return backups;
+    }
+
+    public void setBackups(Integer backups) {
+        this.backups = backups;
+    }
+
     @Override
     public String toString() {
         return "MySmartCache{" +
@@ -81,6 +92,7 @@ public class MySmartCache implements Serializable {
                 ", is_cache=" + is_cache +
                 ", mode='" + mode + '\'' +
                 ", maxSize=" + maxSize +
+                ", backups=" + backups +
                 ", cacheDllType=" + cacheDllType +
                 '}';
     }

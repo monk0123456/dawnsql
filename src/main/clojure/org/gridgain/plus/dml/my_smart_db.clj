@@ -415,19 +415,38 @@
                         (recur it (conj lst-rs (MyLogCache. (my-lexical/my-cache-name schema_name table_name) schema_name table_name (get-delete-key row pk_lst) nil (SqlType/DELETE)))))
                     lst-rs)))))
 
+;(defn re-ht [ht]
+;    (letfn [(my-re-ht [ht]
+;                (cond (not (contains? ht "table_name")) (throw (Exception. "创建 cache 时 table_name 不能为空！"))
+;                      (and (not (contains? ht "is_cache")) (not (contains? ht "mode")) (not (contains? ht "maxSize"))) (doto ht (.put "is_cache" false) (.put "mode" "partitioned") (.put "maxSize" 0))
+;                      (and (contains? ht "is_cache") (true? (.get ht "is_cache"))) (cond (not (contains? ht "maxSize")) (throw (Exception. "is_cache 为 true，必须设置 maxSize 参数，且必须为正数！"))
+;                                                                                         (and (contains? ht "maxSize") (<= (.get ht "maxSize") 0)) (throw (Exception. "is_cache 为 true，必须设置 maxSize 参数，且必须为正数！"))
+;                                                                                         (not (contains? ht "mode")) (doto ht (.put "mode" "partitioned"))
+;                                                                                         :else
+;                                                                                         ht
+;                                                                                         )
+;                      (and (contains? ht "is_cache") (false? (.get ht "is_cache")) (not (contains? ht "mode")) (not (contains? ht "maxSize"))) (doto ht (.put "mode" "partitioned") (.put "maxSize" 0))
+;                      (and (contains? ht "is_cache") (false? (.get ht "is_cache")) (not (contains? ht "maxSize"))) (doto ht (.put "maxSize" 0))
+;                      :else
+;                      ht
+;                      ))]
+;        (let [my-ht (my-re-ht ht)]
+;            (if (not (contains? my-ht "backups"))
+;                (doto my-ht (.put "backups" 0))
+;                my-ht)))
+;    )
+
 (defn re-ht [ht]
     (cond (not (contains? ht "table_name")) (throw (Exception. "创建 cache 时 table_name 不能为空！"))
-          (and (not (contains? ht "is_cache")) (not (contains? ht "mode")) (not (contains? ht "maxSize"))) (doto ht (.put "is_cache" false) (.put "mode" "partitioned") (.put "maxSize" 0))
-          (and (contains? ht "is_cache") (true? (.get ht "is_cache"))) (cond (not (contains? ht "maxSize")) (throw (Exception. "is_cache 为 true，必须设置 maxSize 参数，且必须为正数！"))
-                                                                             (and (contains? ht "maxSize") (<= (.get ht "maxSize") 0)) (throw (Exception. "is_cache 为 true，必须设置 maxSize 参数，且必须为正数！"))
-                                                                             (not (contains? ht "mode")) (doto ht (.put "mode" "partitioned"))
-                                                                             :else
-                                                                             ht
-                                                                             )
-          (and (contains? ht "is_cache") (false? (.get ht "is_cache")) (not (contains? ht "mode")) (not (contains? ht "maxSize"))) (doto ht (.put "mode" "partitioned") (.put "maxSize" 0))
-          (and (contains? ht "is_cache") (false? (.get ht "is_cache")) (not (contains? ht "maxSize"))) (doto ht (.put "maxSize" 0))
-          :else
-          ht
+          (not (contains? ht "is_cache")) (re-ht (doto ht (.put "is_cache" false)))
+          (not (contains? ht "mode")) (re-ht (doto ht (.put "mode" "partitioned")))
+          (not (contains? ht "backups")) (re-ht (doto ht (.put "backups" 0)))
+          (not (contains? ht "maxSize")) (re-ht (doto ht (.put "maxSize" 0)))
+          (and (contains? ht "backups") (not (int? (.get ht "backups")))) (throw (Exception. "创建 cache 时 backups 必须是整数！"))
+          (and (contains? ht "maxSize") (not (int? (.get ht "maxSize")))) (throw (Exception. "创建 cache 时 maxSize 必须是整数！"))
+          (and (contains? ht "is_cache") (not (boolean? (.get ht "is_cache")))) (throw (Exception. "创建 cache 时 is_cache 必须是 boolean 类型！"))
+          (and (contains? ht "mode") (not (contains? #{"partitioned" "replicated"} (str/lower-case (.get ht "mode"))))) (throw (Exception. "创建 cache 时 mode 必须是\"partitioned\" 或 \"replicated\"！"))
+          :else ht
           ))
 
 ; no sql
@@ -435,9 +454,9 @@
     (if-let [m (.cache ignite (format "c_%s_%s" (str/lower-case schema_name) (str/lower-case table_name)))]
         m))
 
-(defn my-create-cache [ignite group_id schema_name table_name is_cache mode maxSize]
+(defn my-create-cache [ignite group_id schema_name table_name is_cache mode maxSize backups]
     (if (contains? #{"all" "ddl"} (str/lower-case (nth group_id 2)))
-        (MyNoSqlUtil/createCacheSave ignite schema_name table_name is_cache mode maxSize)
+        (MyNoSqlUtil/createCacheSave ignite schema_name table_name is_cache mode maxSize backups)
         (throw (Exception. "该用户组没有添加 cache 的权限！"))))
 
 (defn get-is-cache [is_cache ign_cache]
@@ -445,13 +464,13 @@
         is_cache false))
 
 (defn my-create [ignite group_id my-obj]
-    (let [{table_name "table_name" is_cache_0 "is_cache" mode "mode" maxSize "maxSize"} (re-ht (my-lexical/get-value my-obj)) ign_cache (.getCache (.configuration ignite))]
+    (let [{table_name "table_name" is_cache_0 "is_cache" mode "mode" maxSize "maxSize" backups "backups"} (re-ht (my-lexical/get-value my-obj)) ign_cache (.getCache (.configuration ignite))]
         (let [is_cache (get-is-cache is_cache_0 ign_cache)]
             (if-let [{schema_name :schema_name table_name :table_name} (my-lexical/get-schema table_name)]
                 (if (= schema_name "")
-                    (my-create-cache ignite group_id (nth group_id 1) table_name is_cache mode maxSize)
-                    (cond (my-lexical/is-eq? (nth group_id 1) schema_name) (my-create-cache ignite group_id (nth group_id 1) table_name is_cache mode maxSize)
-                          (= (first group_id) 0) (my-create-cache ignite group_id schema_name table_name is_cache mode maxSize)
+                    (my-create-cache ignite group_id (nth group_id 1) table_name is_cache mode maxSize backups)
+                    (cond (my-lexical/is-eq? (nth group_id 1) schema_name) (my-create-cache ignite group_id (nth group_id 1) table_name is_cache mode maxSize backups)
+                          (= (first group_id) 0) (my-create-cache ignite group_id schema_name table_name is_cache mode maxSize backups)
                           :else
                           (throw (Exception. "该用户组不能在其它用户组添加 cache 的！"))
                           ))))
