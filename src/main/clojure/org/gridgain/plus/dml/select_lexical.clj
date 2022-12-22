@@ -1839,6 +1839,9 @@
               (throw (Exception. "数据类型不是序列或者 Iterator"))
               )))
 
+(defn my-to-lst [sql]
+    (cond (is-seq? sql) sql
+          (string? sql) (to-back sql)))
 
 
 

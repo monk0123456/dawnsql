@@ -54,16 +54,14 @@
 ;        {:schema_name (-> obj :schema_name) :table_name (-> obj :table_name) :args (-> obj :args) :sql (format "select %s from %s.%s where %s" pk_line (-> obj :schema_name) (-> obj :table_name) (my-select/my-array-to-sql (-> obj :where_lst))) :pk_lst (get_pk_lst lst_pk dic [])}))
 
 (defn my_delete_query_sql [^Ignite ignite group_id obj]
-    (if-let [{pk :pk data :data} (.get (.cache ignite "table_ast") (MySchemaTable. (-> obj :schema_name) (-> obj :table_name)))]
+    (if-let [{schema_name :schema_name table_name :table_name args :args where_lst :where_lst lst-ast :lst-ast pk :pk} obj]
         (letfn [(get_pk_line [[f & r] lst]
                     (if (some? f)
                         (recur r (conj lst (-> f :column_name)))
                         (if-not (empty? lst)
                             (str/join "," lst)
                             "")))]
-            (if-let [k-v (my-update/pk-where pk (my-select/sql-to-ast (-> obj :where_lst)))]
-                {:schema_name (-> obj :schema_name) :table_name (-> obj :table_name) :args (-> obj :args) :k-v k-v}
-                {:schema_name (-> obj :schema_name) :table_name (-> obj :table_name) :args (-> obj :args) :sql (format "select %s from %s.%s where %s" (get_pk_line pk []) (-> obj :schema_name) (-> obj :table_name) (my-select/my-array-to-sql (-> obj :where_lst))) :pk_lst pk})
+            {:schema_name schema_name :table_name table_name :args args :sql (format "select %s from %s.%s where %s" (get_pk_line pk []) schema_name table_name (my-select/my-array-to-sql where_lst)) :lst-ast lst-ast :pk_lst pk}
             )))
 
 
@@ -81,35 +79,37 @@
 ;                        ))))))
 
 (defn my-authority [^Ignite ignite group_id lst-sql args-dic]
-    (if-let [{schema_name :schema_name table_name :table_name where_lst :where_lst} (get_table_name lst-sql)]
-        (let [[where-lst args] (my-update/my-where-line where_lst args-dic)]
-            (cond (and (my-lexical/is-eq? schema_name "my_meta") (= (first group_id) 0)) (if (contains? plus-init-sql/my-grid-tables-set (str/lower-case table_name))
-                                                                                             (throw (Exception. (format "%s 没有删除数据的权限！" table_name)))
-                                                                                             {:schema_name schema_name :table_name table_name :args args :where_lst where-lst})
-                  (= (first group_id) 0) (if (and (or (my-lexical/is-eq? schema_name "my_meta") (my-lexical/is-str-empty? schema_name)) (contains? plus-init-sql/my-grid-tables-set (str/lower-case table_name)))
-                                             (throw (Exception. (format "%s 没有删除数据的权限！" table_name)))
-                                             (if (my-lexical/is-str-not-empty? schema_name)
-                                                 {:schema_name schema_name :table_name table_name :args args :where_lst where-lst}
-                                                 {:schema_name (second group_id) :table_name table_name :args args :where_lst where-lst}))
-                  (and (my-lexical/is-eq? schema_name "my_meta") (> (first group_id) 0)) (throw (Exception. "用户不存在或者没有权限！删除数据！"))
-                  (and (my-lexical/is-str-empty? schema_name) (my-lexical/is-str-not-empty? (second group_id))) (if-let [{v_table_name :table_name v_where_lst :where_lst} (my_view_db ignite group_id (second group_id) table_name)]
-                                                                                                                    (if (my-lexical/is-eq? table_name v_table_name)
-                                                                                                                        {:schema_name (second group_id) :table_name table_name :args args :where_lst (my-update/merge_where where-lst v_where_lst)})
-                                                                                                                    {:schema_name (second group_id) :table_name table_name :args args :where_lst where-lst}
-                                                                                                                    )
-                  (and (my-lexical/is-eq? schema_name (second group_id)) (my-lexical/is-str-not-empty? (second group_id))) (if-let [{v_table_name :table_name v_where_lst :where_lst} (my_view_db ignite group_id schema_name table_name)]
-                                                                                                                               (if (my-lexical/is-eq? table_name v_table_name)
-                                                                                                                                   {:schema_name schema_name :table_name table_name :args args :where_lst (my-update/merge_where where-lst v_where_lst)})
-                                                                                                                               {:schema_name schema_name :table_name table_name :args args :where_lst where-lst}
-                                                                                                                               )
-                  (and (not (my-lexical/is-eq? schema_name (second group_id))) (my-lexical/is-str-not-empty? schema_name) (my-lexical/is-str-not-empty? (second group_id))) (if-let [{v_table_name :table_name v_where_lst :where_lst} (my_view_db ignite group_id schema_name table_name)]
-                                                                                                                                                                                (if (my-lexical/is-eq? table_name v_table_name)
-                                                                                                                                                                                    {:schema_name schema_name :table_name table_name :args args :where_lst (my-update/merge_where where-lst v_where_lst)})
-                                                                                                                                                                                (if (not (my-lexical/is-eq? schema_name "public"))
-                                                                                                                                                                                    (throw (Exception. "用户不存在或者没有权限！删除数据！"))
-                                                                                                                                                                                    {:schema_name "public" :table_name table_name :args args :where_lst where-lst})
-                                                                                                                                                                                )
-                  ))))
+    (if-let [{schema_name :schema_name table_name :table_name where_lst_source :where_lst} (get_table_name lst-sql)]
+        (let [{pk :pk data :data} (.get (.cache ignite "table_ast") (MySchemaTable. schema_name table_name))]
+            (let [[where-lst args] (my-update/my-where-line where_lst_source args-dic)]
+                (cond (and (my-lexical/is-eq? schema_name "my_meta") (= (first group_id) 0)) (if (contains? plus-init-sql/my-grid-tables-set (str/lower-case table_name))
+                                                                                                 (throw (Exception. (format "%s 没有删除数据的权限！" table_name)))
+                                                                                                 {:schema_name schema_name :table_name table_name :args args :where_lst where-lst :lst-ast (my-update/where-pk pk where_lst_source) :pk pk})
+                      (= (first group_id) 0) (if (and (or (my-lexical/is-eq? schema_name "my_meta") (my-lexical/is-str-empty? schema_name)) (contains? plus-init-sql/my-grid-tables-set (str/lower-case table_name)))
+                                                 (throw (Exception. (format "%s 没有删除数据的权限！" table_name)))
+                                                 (if (my-lexical/is-str-not-empty? schema_name)
+                                                     {:schema_name schema_name :table_name table_name :args args :where_lst where-lst :lst-ast (my-update/where-pk pk where_lst_source) :pk pk}
+                                                     {:schema_name (second group_id) :table_name table_name :args args :where_lst where-lst :lst-ast (my-update/where-pk pk where_lst_source) :pk pk}))
+                      (and (my-lexical/is-eq? schema_name "my_meta") (> (first group_id) 0)) (throw (Exception. "用户不存在或者没有权限！删除数据！"))
+                      (and (my-lexical/is-str-empty? schema_name) (my-lexical/is-str-not-empty? (second group_id))) (if-let [{v_table_name :table_name v_where_lst :where_lst} (my_view_db ignite group_id (second group_id) table_name)]
+                                                                                                                        (if (my-lexical/is-eq? table_name v_table_name)
+                                                                                                                            {:schema_name (second group_id) :table_name table_name :args args :where_lst (my-update/merge_where where-lst v_where_lst) :lst-ast (my-update/where-pk pk (apply concat (map my-lexical/to-back (my-update/merge_where where_lst_source v_where_lst)))) :pk pk})
+                                                                                                                        {:schema_name (second group_id) :table_name table_name :args args :where_lst where-lst :lst-ast (my-update/where-pk pk where_lst_source) :pk pk}
+                                                                                                                        )
+                      (and (my-lexical/is-eq? schema_name (second group_id)) (my-lexical/is-str-not-empty? (second group_id))) (if-let [{v_table_name :table_name v_where_lst :where_lst} (my_view_db ignite group_id schema_name table_name)]
+                                                                                                                                   (if (my-lexical/is-eq? table_name v_table_name)
+                                                                                                                                       {:schema_name schema_name :table_name table_name :args args :where_lst (my-update/merge_where where-lst v_where_lst) :lst-ast (my-update/where-pk pk (apply concat (map my-lexical/to-back (my-update/merge_where where_lst_source v_where_lst)))) :pk pk})
+                                                                                                                                   {:schema_name schema_name :table_name table_name :args args :where_lst where-lst :lst-ast (my-update/where-pk pk where-lst) :pk pk}
+                                                                                                                                   )
+                      (and (not (my-lexical/is-eq? schema_name (second group_id))) (my-lexical/is-str-not-empty? schema_name) (my-lexical/is-str-not-empty? (second group_id))) (if-let [{v_table_name :table_name v_where_lst :where_lst} (my_view_db ignite group_id schema_name table_name)]
+                                                                                                                                                                                    (if (my-lexical/is-eq? table_name v_table_name)
+                                                                                                                                                                                        {:schema_name schema_name :table_name table_name :args args :where_lst (my-update/merge_where where-lst v_where_lst) :lst-ast (my-update/where-pk pk (apply concat (map my-lexical/to-back (my-update/merge_where where_lst_source v_where_lst)))) :pk pk})
+                                                                                                                                                                                    (if (not (my-lexical/is-eq? schema_name "public"))
+                                                                                                                                                                                        (throw (Exception. "用户不存在或者没有权限！删除数据！"))
+                                                                                                                                                                                        {:schema_name "public" :table_name table_name :args args :where_lst where-lst :lst-ast (my-update/where-pk pk where_lst_source) :pk pk})
+                                                                                                                                                                                    )
+                      )))
+        ))
 
 ;(defn my-no-authority-0 [^Ignite ignite ^Long group_id lst-sql args-dic]
 ;    (if-let [{schema_name :schema_name table_name :table_name where_lst :where_lst} (get_table_name lst-sql)]
@@ -136,7 +136,10 @@
 
 (defn my_delete_obj [^Ignite ignite group_id lst-sql args-dic]
     (if-let [m (my-lexical/get-re-obj ignite (my-authority ignite group_id lst-sql args-dic))]
-        (my_delete_query_sql ignite group_id m)
+        (if-let [ms (my_delete_query_sql ignite group_id m)]
+            (if (not (= (count (-> ms :lst-ast)) (count (-> ms :pk_lst))))
+                (assoc ms :lst-ast nil)
+                ms))
         (throw (Exception. "删除语句字符串错误！"))))
 
 ;(defn my_delete_obj-no-authority-0 [^Ignite ignite ^Long group_id lst-sql args-dic]
@@ -148,5 +151,8 @@
 
 (defn my_delete_obj-no-authority [^Ignite ignite group_id lst-sql args-dic]
     (if-let [m (my-lexical/get-re-obj ignite (my-no-authority ignite group_id lst-sql args-dic))]
-        (my_delete_query_sql ignite group_id m)
+        (if-let [ms (my_delete_query_sql ignite group_id m)]
+            (if (not (= (count (-> ms :lst-ast)) (count (-> ms :pk_lst))))
+                (assoc ms :lst-ast nil)
+                ms))
         (throw (Exception. "删除语句字符串错误！"))))

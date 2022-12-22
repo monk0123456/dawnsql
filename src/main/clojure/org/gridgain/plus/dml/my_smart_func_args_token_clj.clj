@@ -408,7 +408,7 @@
 
 ; args-dic 的终极使用在这里，通过匿名函数来替换真正的值
 (defn func-token-to-clj [ignite group_id m args-dic]
-    (if (contains? m :item_name)
+    (if (and (map? m) (contains? m :item_name))
         (my-item-to-clj m args-dic)
         (let [fn-line (token-to-clj ignite group_id m args-dic)]
             (if-not (Strings/isNullOrEmpty fn-line)

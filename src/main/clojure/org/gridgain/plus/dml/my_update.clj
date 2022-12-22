@@ -19,6 +19,34 @@
         ;:methods [^:static [my_update_run_log [org.apache.ignite.Ignite Long String] java.util.ArrayList]]
         ))
 
+; 判断 where_line 中的查询项是否全部是 pk
+(defn where-pk [pk where_line]
+    (letfn [(get-where-items [lst]
+                (if (map? (first lst))
+                    (get-where-items [lst])
+                    (loop [[f & r] lst rs #{} my-rs []]
+                        (if (some? f)
+                            (cond (and (my-lexical/is-seq? f) (contains? (first f) :item_name) (my-lexical/is-eq? (-> (second f) :comparison_symbol) "=")) (recur r (conj rs (str/lower-case (-> (first f) :item_name))) (conj my-rs f))
+                                  (and (map? f) (contains? f :and_or_symbol) (my-lexical/is-eq? (-> f :and_or_symbol) "and")) (recur r rs my-rs)
+                                  :else (recur nil nil nil))
+                            {:ast my-rs :items rs}))))
+            (re-type [[f & r] pk lst]
+                (if (some? f)
+                    (if (my-lexical/is-eq? (-> (first f) :item_name) (-> pk :column_name))
+                        (recur r pk (conj lst (concat [(assoc (first f) :item_type (-> pk :column_type))] (rest f))))
+                        (recur r pk lst)
+                        )
+                    lst))]
+        (if-let [{lst-ast :ast rs :items} (get-where-items (my-select/sql-to-ast where_line))]
+            (if (= (count rs) (count pk))
+                (loop [[f & r] pk flag true re-ast []]
+                    (if (some? f)
+                        (if (contains? rs (-> f :column_name))
+                            (recur r flag (conj re-ast (re-type lst-ast f [])))
+                            (recur nil false re-ast))
+                        (if (true? flag)
+                            re-ast)))))))
+
 (defn my-where-items [ps]
     (letfn [(even-items [ps]
                 (let [my-count (count ps)]
@@ -162,47 +190,49 @@
 
 (defn my-authority [^Ignite ignite group_id lst-sql args-dic]
     (when-let [{schema_name :schema_name table_name :table_name items :items where_line :where_line} (get_json lst-sql)]
-        (let [[where-lst args] (my-where-line where_line args-dic)]
-            (cond (and (my-lexical/is-eq? schema_name "my_meta") (= (first group_id) 0)) (if (contains? plus-init-sql/my-grid-tables-set (str/lower-case table_name))
-                                                                                             (throw (Exception. (format "%s 没有修改数据的权限！" table_name)))
-                                                                                             {:schema_name schema_name :table_name table_name :items items :where_line where-lst :args args})
-                  (and (my-lexical/is-eq? schema_name "my_meta") (> (first group_id) 0)) (throw (Exception. "用户不存在或者没有权限！修改数据！"))
-                  (= (first group_id) 0) (if (and (or (my-lexical/is-eq? schema_name "my_meta") (my-lexical/is-str-empty? schema_name)) (contains? plus-init-sql/my-grid-tables-set (str/lower-case table_name)))
-                                             (throw (Exception. (format "%s 没有修改数据的权限！" table_name)))
-                                             (if (my-lexical/is-str-not-empty? schema_name)
-                                                 {:schema_name schema_name :table_name table_name :items items :where_line where-lst :args args}
-                                                 {:schema_name (second group_id) :table_name table_name :items items :where_line where-lst :args args}))
-                  (and (my-lexical/is-eq? schema_name "my_meta") (> (first group_id) 0)) (throw (Exception. "用户不存在或者没有权限！添加数据！"))
-                  (and (my-lexical/is-str-empty? schema_name) (my-lexical/is-str-not-empty? (second group_id))) (if-let [{v_items :items v_where_line :where_line} (my-view-db ignite group_id (second group_id) table_name)]
-                                                                                                                    (if (nil? (my-has-authority-item items v_items))
-                                                                                                                        (let [where-lst (merge_where where-lst v_where_line)]
-                                                                                                                            {:schema_name (second group_id) :table_name table_name :items items :where_line where-lst :where-objs (my-select/sql-to-ast where-lst) :args args})
-                                                                                                                        {:schema_name (second group_id) :table_name table_name :items items :where_line where-lst :where-objs (my-select/sql-to-ast where-lst) :args args})
-                                                                                                                    {:schema_name (second group_id) :table_name table_name :items items :where_line where-lst :where-objs (my-select/sql-to-ast where-lst) :args args}
-                                                                                                                    )
-                  (and (my-lexical/is-eq? schema_name (second group_id)) (my-lexical/is-str-not-empty? (second group_id))) (if-let [{v_items :items v_where_line :where_line} (my-view-db ignite group_id schema_name table_name)]
-                                                                                                                               (if (nil? (my-has-authority-item items v_items))
-                                                                                                                                   (let [where-lst (merge_where where-lst v_where_line)]
-                                                                                                                                       {:schema_name schema_name :table_name table_name :items items :where_line where-lst :where-objs (my-select/sql-to-ast where-lst) :args args})
-                                                                                                                                   {:schema_name schema_name :table_name table_name :items items :where_line where-lst :where-objs (my-select/sql-to-ast where-lst) :args args})
-                                                                                                                               {:schema_name schema_name :table_name table_name :items items :where_line where-lst :where-objs (my-select/sql-to-ast where-lst) :args args}
-                                                                                                                               )
-                  (and (not (my-lexical/is-eq? schema_name (second group_id))) (my-lexical/is-str-not-empty? schema_name) (my-lexical/is-str-not-empty? (second group_id))) (if-let [{v_items :items v_where_line :where_line} (my-view-db ignite group_id schema_name table_name)]
-                                                                                                                                                                                (if (nil? (my-has-authority-item items v_items))
-                                                                                                                                                                                    (let [where-lst (merge_where where-lst v_where_line)]
-                                                                                                                                                                                        {:schema_name schema_name :table_name table_name :items items :where_line where-lst :where-objs (my-select/sql-to-ast where-lst) :args args})
-                                                                                                                                                                                    {:schema_name schema_name :table_name table_name :items items :where_line where-lst :where-objs (my-select/sql-to-ast where-lst) :args args})
-                                                                                                                                                                                (if (not (my-lexical/is-eq? schema_name "public"))
-                                                                                                                                                                                    (throw (Exception. "用户不存在或者没有权限！修改数据！"))
-                                                                                                                                                                                    {:schema_name "public" :table_name table_name :items items :where_line where-lst :args args})
-                                                                                                                                                                                )
-                  ))
+        (let [{pk :pk data :data} (.get (.cache ignite "table_ast") (MySchemaTable. schema_name table_name))]
+            (let [[where-lst args] (my-where-line where_line args-dic)]
+                (cond (and (my-lexical/is-eq? schema_name "my_meta") (= (first group_id) 0)) (if (contains? plus-init-sql/my-grid-tables-set (str/lower-case table_name))
+                                                                                                 (throw (Exception. (format "%s 没有修改数据的权限！" table_name)))
+                                                                                                 {:schema_name schema_name :table_name table_name :items items :where_line where-lst :args args :lst-ast (where-pk pk where_line) :pk pk :data data})
+                      (and (my-lexical/is-eq? schema_name "my_meta") (> (first group_id) 0)) (throw (Exception. "用户不存在或者没有权限！修改数据！"))
+                      (= (first group_id) 0) (if (and (or (my-lexical/is-eq? schema_name "my_meta") (my-lexical/is-str-empty? schema_name)) (contains? plus-init-sql/my-grid-tables-set (str/lower-case table_name)))
+                                                 (throw (Exception. (format "%s 没有修改数据的权限！" table_name)))
+                                                 (if (my-lexical/is-str-not-empty? schema_name)
+                                                     {:schema_name schema_name :table_name table_name :items items :where_line where-lst :args args :lst-ast (where-pk pk where_line) :pk pk :data data}
+                                                     {:schema_name (second group_id) :table_name table_name :items items :where_line where-lst :args args :lst-ast (where-pk pk where_line) :pk pk :data data}))
+                      (and (my-lexical/is-eq? schema_name "my_meta") (> (first group_id) 0)) (throw (Exception. "用户不存在或者没有权限！添加数据！"))
+                      (and (my-lexical/is-str-empty? schema_name) (my-lexical/is-str-not-empty? (second group_id))) (if-let [{v_items :items v_where_line :where_line} (my-view-db ignite group_id (second group_id) table_name)]
+                                                                                                                        (if (nil? (my-has-authority-item items v_items))
+                                                                                                                            (let [where-lst (merge_where where-lst v_where_line)]
+                                                                                                                                {:schema_name (second group_id) :table_name table_name :items items :where_line where-lst :args args :lst-ast (where-pk pk (apply concat (map my-lexical/to-back where-lst))) :pk pk :data data})
+                                                                                                                            {:schema_name (second group_id) :table_name table_name :items items :where_line where-lst :args args :lst-ast (where-pk pk (apply concat (map my-lexical/to-back where-lst))) :pk pk :data data})
+                                                                                                                        {:schema_name (second group_id) :table_name table_name :items items :where_line where-lst :args args :lst-ast (where-pk pk (my-select/sql-to-ast (apply concat (map my-lexical/to-back where-lst)))) :pk pk :data data}
+                                                                                                                        )
+                      (and (my-lexical/is-eq? schema_name (second group_id)) (my-lexical/is-str-not-empty? (second group_id))) (if-let [{v_items :items v_where_line :where_line} (my-view-db ignite group_id schema_name table_name)]
+                                                                                                                                   (if (nil? (my-has-authority-item items v_items))
+                                                                                                                                       (let [where-lst (merge_where where-lst v_where_line)]
+                                                                                                                                           {:schema_name schema_name :table_name table_name :items items :where_line where-lst :args args :lst-ast (where-pk pk (apply concat (map my-lexical/to-back where-lst))) :pk pk :data data})
+                                                                                                                                       {:schema_name schema_name :table_name table_name :items items :where_line where-lst :args args :lst-ast (where-pk pk (apply concat (map my-lexical/to-back where-lst))) :pk pk :data data})
+                                                                                                                                   {:schema_name schema_name :table_name table_name :items items :where_line where-lst :args args :lst-ast (where-pk pk (apply concat (map my-lexical/to-back where-lst))) :pk pk :data data}
+                                                                                                                                   )
+                      (and (not (my-lexical/is-eq? schema_name (second group_id))) (my-lexical/is-str-not-empty? schema_name) (my-lexical/is-str-not-empty? (second group_id))) (if-let [{v_items :items v_where_line :where_line} (my-view-db ignite group_id schema_name table_name)]
+                                                                                                                                                                                    (if (nil? (my-has-authority-item items v_items))
+                                                                                                                                                                                        (let [where-lst (merge_where where-lst v_where_line)]
+                                                                                                                                                                                            {:schema_name schema_name :table_name table_name :items items :where_line where-lst :args args :lst-ast (where-pk pk (apply concat (map my-lexical/to-back where-lst))) :pk pk :data data})
+                                                                                                                                                                                        {:schema_name schema_name :table_name table_name :items items :where_line where-lst :args args :lst-ast (where-pk pk (apply concat (map my-lexical/to-back where-lst))) :pk pk :data data})
+                                                                                                                                                                                    (if (not (my-lexical/is-eq? schema_name "public"))
+                                                                                                                                                                                        (throw (Exception. "用户不存在或者没有权限！修改数据！"))
+                                                                                                                                                                                        {:schema_name "public" :table_name table_name :items items :where_line where-lst :args args :lst-ast (where-pk pk (apply concat (map my-lexical/to-back where-lst))) :pk pk :data data})
+                                                                                                                                                                                    )
+                      )))
         ))
 
 (defn my-no-authority [^Ignite ignite group_id lst-sql args-dic]
     (when-let [{schema_name :schema_name table_name :table_name items :items where_line :where_line} (get_json lst-sql)]
-        (let [[where-lst args] (my-where-line where_line args-dic)]
-            {:schema_name schema_name :table_name table_name :items items :where_line where-lst :args args})
+        (let [{pk :pk data :data} (.get (.cache ignite "table_ast") (MySchemaTable. schema_name table_name))]
+            (let [[where-lst args] (my-where-line where_line args-dic) lst-ast (where-pk pk where_line)]
+                {:schema_name schema_name :table_name table_name :items items :where_line where-lst :args args :lst-ast lst-ast :pk pk :data data}))
         ))
 
 (defn my-items
@@ -285,7 +315,7 @@
         (let [{query-line :query-line query-lst :query-lst dic :dic} (my-pk-def-map ignite group_id (-> obj :schema_name) (-> obj :table_name) obj)]
             {:schema_name (-> obj :schema_name) :table_name (-> obj :table_name) :query-lst query-lst :sql (format "select %s from %s.%s where %s" query-line (-> obj :schema_name) (-> obj :table_name) (my-select/my-array-to-sql (-> obj :where_line))) :args (-> obj :args) :items (get_items_type (-> obj :items) dic [])})))
 
-(declare get-column get-column_type merge-pk-where-items get_pk_line pk-where get-column-type get_items_type)
+(declare get-column my-get-column-type merge-pk-where-items my-merge-pk-where-items get_pk_line pk-where get-column-type get_items_type)
 
 (defn get-column [[f & r] column_name]
     (if (some? f)
@@ -293,7 +323,7 @@
             (-> f :column_type)
             (recur r column_name))
         nil))
-(defn get-column_type [pk data column_name]
+(defn my-get-column-type [pk data column_name]
     (if-let [ct (get-column pk column_name)]
         ct
         (if-let [m (get data (str/lower-case column_name))]
@@ -306,7 +336,7 @@
         (loop [[f & r] (concat pk lst-items) index 0 rs [] ht #{}]
             (if (some? f)
                 (cond (and (map? f) (contains? f :column_name) (not (contains? ht (-> f :column_name)))) (recur r (+ index 1) (conj rs {:column_name (-> f :column_name) :column_type (-> f :column_type) :index index :is-pk true}) (conj ht (-> f :column_name)))
-                      (and (string? f) (not (contains? args-dic f)) (not (contains? ht f))) (recur r (+ index 1) (conj rs {:column_name f :column_type (get-column_type pk data f) :index index :is-pk false}) (conj ht f))
+                      (and (string? f) (not (contains? args-dic f)) (not (contains? ht f))) (recur r (+ index 1) (conj rs {:column_name f :column_type (my-get-column-type pk data f) :index index :is-pk false}) (conj ht f))
                       :else
                       (recur r (+ index 1) rs ht))
                 rs))
@@ -316,6 +346,12 @@
                     (recur r (+ index 1) (conj rs {:column_name (-> f :column_name) :column_type (-> f :column_type) :index index :is-pk true}) (conj ht (-> f :column_name)))
                     (recur r (+ index 1) rs ht))
                 rs))))
+
+(defn my-merge-pk-where-items [pk]
+    (loop [[f & r] pk index 0 rs []]
+        (if (some? f)
+            (recur r (+ index 1) (conj rs {:column_name (-> f :column_name), :column_type (-> f :column_type), :index index}))
+            rs)))
 
 (defn get_pk_line [[f & r] lst]
     (if (some? f)
@@ -343,27 +379,45 @@
             (recur r (conj lst (assoc f :type (get-column-type-ex (-> f :item_name) data))))
             lst)))
 
-(defn my_update_query_sql [^Ignite ignite group_id obj args-dic]
-    (if-let [{pk :pk data :data} (.get (.cache ignite "table_ast") (MySchemaTable. (-> obj :schema_name) (-> obj :table_name)))]
+;(defn my_update_query_sql [^Ignite ignite obj]
+;    (if-let [{pk :pk data :data} (.get (.cache ignite "table_ast") (MySchemaTable. (-> obj :schema_name) (-> obj :table_name)))]
+;        (let [pk-where-item (my-merge-pk-where-items pk)]
+;            (if-let [k-v (pk-where pk (-> obj :where-objs))]
+;                {:schema_name (-> obj :schema_name) :table_name (-> obj :table_name) :k-v k-v :args (-> obj :args) :items (get_items_type (-> obj :items) data)}
+;                {:schema_name (-> obj :schema_name) :table_name (-> obj :table_name) :query-lst pk-where-item :sql (format "select %s from %s.%s where %s" (get_pk_line pk-where-item []) (-> obj :schema_name) (-> obj :table_name) (my-select/my-array-to-sql (-> obj :where_line))) :args (-> obj :args) :items (get_items_type (-> obj :items) data)})))
+;    )
+
+;(defn my_update_query_sql [obj args-dic]
+;    (if-let [{schema_name :schema_name table_name :table_name where-objs :where-objs args :args items :items where_line :where_line lst-ast :lst-ast pk :pk data :data} obj]
+;        (let [pk-where-item (merge-pk-where-items pk data obj args-dic)]
+;            (if-let [k-v (pk-where pk where-objs)]
+;                {:schema_name schema_name :table_name table_name :k-v k-v :args args :items (get_items_type items data) :lst-ast lst-ast}
+;                {:schema_name schema_name :table_name table_name :query-lst pk-where-item :sql (format "select %s from %s.%s where %s" (get_pk_line pk-where-item []) schema_name table_name (my-select/my-array-to-sql where_line)) :args args :items (get_items_type items data) :lst-ast lst-ast})))
+;    )
+
+(defn my_update_query_sql [obj args-dic]
+    (if-let [{schema_name :schema_name table_name :table_name args :args items :items where_line :where_line lst-ast :lst-ast pk :pk data :data} obj]
         (let [pk-where-item (merge-pk-where-items pk data obj args-dic)]
-            (if-let [k-v (pk-where pk (-> obj :where-objs))]
-                {:schema_name (-> obj :schema_name) :table_name (-> obj :table_name) :k-v k-v :args (-> obj :args) :items (get_items_type (-> obj :items) data)}
-                {:schema_name (-> obj :schema_name) :table_name (-> obj :table_name) :query-lst pk-where-item :sql (format "select %s from %s.%s where %s" (get_pk_line pk-where-item []) (-> obj :schema_name) (-> obj :table_name) (my-select/my-array-to-sql (-> obj :where_line))) :args (-> obj :args) :items (get_items_type (-> obj :items) data)})))
+            {:schema_name schema_name :table_name table_name :query-lst pk-where-item :sql (format "select %s from %s.%s where %s" (get_pk_line pk-where-item []) schema_name table_name (my-select/my-array-to-sql where_line)) :args args :items (get_items_type items data) :lst-ast lst-ast}))
     )
 
 (defn my_update_obj-0 [^Ignite ignite group_id lst-sql args-dic]
     (if-let [m (my-authority ignite group_id lst-sql args-dic)]
         (if (and (boolean? m) (true? m))
             true
-            (if-let [us (my_update_query_sql ignite group_id m args-dic)]
-                us
+            (if-let [us (my_update_query_sql m args-dic)]
+                (if (and (> (count (-> us :query-lst)) 0) (= (count (-> m :pk)) (count (-> us :query-lst))))
+                    us
+                    (assoc us :lst-ast nil))
                 (throw (Exception. "更新语句字符串错误！"))))
         (throw (Exception. "更新语句字符串错误！"))))
 
 (defn my_update_obj [^Ignite ignite group_id lst-sql args-dic]
     (if-let [m (my-lexical/get-re-obj ignite (my-authority ignite group_id lst-sql args-dic))]
-        (if-let [us (my_update_query_sql ignite group_id m args-dic)]
-            us
+        (if-let [us (my_update_query_sql m args-dic)]
+            (if (and (> (count (-> us :query-lst)) 0) (= (count (-> m :pk)) (count (-> us :query-lst))))
+                us
+                (assoc us :lst-ast nil))
             (throw (Exception. "更新语句字符串错误！")))
         (throw (Exception. "更新语句字符串错误！"))))
 
@@ -371,15 +425,19 @@
     (if-let [m (my-no-authority ignite group_id lst-sql args-dic)]
         (if (and (boolean? m) (true? m))
             true
-            (if-let [us (my_update_query_sql ignite group_id m args-dic)]
-                us
+            (if-let [us (my_update_query_sql m args-dic)]
+                (if (and (> (count (-> us :query-lst)) 0) (= (count (-> m :pk)) (count (-> us :query-lst))))
+                    us
+                    (assoc us :lst-ast nil))
                 (throw (Exception. "更新语句字符串错误！"))))
         (throw (Exception. "更新语句字符串错误！"))))
 
 (defn my_update_obj-authority [^Ignite ignite group_id lst-sql args-dic]
     (if-let [m (my-lexical/get-re-obj ignite (my-no-authority ignite group_id lst-sql args-dic))]
-        (if-let [us (my_update_query_sql ignite group_id m args-dic)]
-            us
+        (if-let [us (my_update_query_sql m args-dic)]
+            (if (and (> (count (-> us :query-lst)) 0) (= (count (-> m :pk)) (count (-> us :query-lst))))
+                us
+                (assoc us :lst-ast nil))
             (throw (Exception. "更新语句字符串错误！")))
         (throw (Exception. "更新语句字符串错误！"))))
 

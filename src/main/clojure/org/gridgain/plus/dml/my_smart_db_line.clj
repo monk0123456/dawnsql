@@ -87,73 +87,83 @@
 (defn insert-to-cache-no-authority [ignite group_id lst]
     (my-smart-db/insert-to-cache-no-authority-lst ignite group_id lst nil))
 
+;(defn update-to-cache [ignite group_id lst]
+;    (if-let [m-obj (my-update/my_update_obj ignite group_id lst {})]
+;        (let [{schema_name :schema_name table_name :table_name query-lst :query-lst sql :sql items :items select-args :args lst-ast :lst-ast} m-obj]
+;            (if-not (nil? lst-ast)
+;                (loop [it (.iterator (.query (.cache ignite (my-cache-name schema_name table_name)) (doto (SqlFieldsQuery. sql)
+;                                                                                                        (.setArgs (to-array select-args))
+;                                                                                                        (.setLazy true)))) lst-rs []]
+;                    (if (.hasNext it)
+;                        (if-let [row (.next it)]
+;                            (recur it (conj lst-rs (MyLogCache. (my-cache-name schema_name table_name) schema_name table_name (my-smart-db/get-update-key row (filter #(-> % :is-pk) query-lst)) (my-smart-db/get-update-value ignite group_id row (filter #(false? (-> % :is-pk)) query-lst) {:dic {}, :keys []} items) (SqlType/UPDATE)))))
+;                        lst-rs))
+;                [(MyLogCache. (my-lexical/my-cache-name schema_name table_name) schema_name table_name (my-smart-db/get-update-lst-ast ignite group_id lst-ast nil) (my-smart-db/get-update-lst-ast-value ignite group_id nil items) (SqlType/UPDATE))]))
+;        ))
+
 (defn update-to-cache [ignite group_id lst]
-    (if-let [m-obj (my-update/my_update_obj ignite group_id lst {})]
-        (if (contains? m-obj :k-v)
-            (let [{schema_name :schema_name table_name :table_name k-v :k-v items :items select-args :args} m-obj]
-                [(MyLogCache. (my-cache-name schema_name table_name) schema_name table_name (my-smart-db/get-update-k-v-key ignite group_id k-v select-args) (my-smart-db/get-update-k-v-value ignite group_id select-args items) (SqlType/UPDATE))])
-            (let [{schema_name :schema_name table_name :table_name query-lst :query-lst sql :sql items :items select-args :args} m-obj]
-                (loop [it (.iterator (.query (.cache ignite (my-cache-name schema_name table_name)) (doto (SqlFieldsQuery. sql)
-                                                                                                                   (.setArgs (to-array select-args))
-                                                                                                                   (.setLazy true)))) lst-rs []]
-                    (if (.hasNext it)
-                        (if-let [row (.next it)]
-                            (recur it (conj lst-rs (MyLogCache. (my-cache-name schema_name table_name) schema_name table_name (my-smart-db/get-update-key row (filter #(-> % :is-pk) query-lst)) (my-smart-db/get-update-value ignite group_id row (filter #(false? (-> % :is-pk)) query-lst) {:dic {}, :keys []} items) (SqlType/UPDATE)))))
-                        lst-rs))))
-        ))
+    (my-smart-db/update-to-cache ignite group_id lst nil))
+
+;(defn update-to-cache-no-authority [ignite group_id lst]
+;    (if-let [m-obj (my-update/my_update_obj-authority ignite group_id lst {})]
+;        (let [{schema_name :schema_name table_name :table_name query-lst :query-lst sql :sql items :items select-args :args lst-ast :lst-ast} m-obj]
+;            (if-not (nil? lst-ast)
+;                (loop [it (.iterator (.query (.cache ignite (my-cache-name schema_name table_name)) (doto (SqlFieldsQuery. sql)
+;                                                                                                        (.setArgs (to-array select-args))
+;                                                                                                        (.setLazy true)))) lst-rs []]
+;                    (if (.hasNext it)
+;                        (if-let [row (.next it)]
+;                            (recur it (conj lst-rs (MyLogCache. (my-cache-name schema_name table_name) schema_name table_name (my-smart-db/get-update-key row (filter #(-> % :is-pk) query-lst)) (my-smart-db/get-update-value ignite group_id row (filter #(false? (-> % :is-pk)) query-lst) {:dic {}, :keys []} items) (SqlType/UPDATE)))))
+;                        lst-rs))
+;                [(MyLogCache. (my-lexical/my-cache-name schema_name table_name) schema_name table_name (my-smart-db/get-update-lst-ast ignite group_id lst-ast nil) (my-smart-db/get-update-lst-ast-value ignite group_id nil items) (SqlType/UPDATE))]))
+;        ))
 
 (defn update-to-cache-no-authority [ignite group_id lst]
-    (if-let [m-obj (my-update/my_update_obj-authority ignite group_id lst {})]
-        (if (contains? m-obj :k-v)
-            (let [{schema_name :schema_name table_name :table_name k-v :k-v items :items select-args :args} m-obj]
-                [(MyLogCache. (my-cache-name schema_name table_name) schema_name table_name (my-smart-db/get-update-k-v-key ignite group_id k-v select-args) (my-smart-db/get-update-k-v-value ignite group_id select-args items) (SqlType/UPDATE))])
-            (let [{schema_name :schema_name table_name :table_name query-lst :query-lst sql :sql items :items select-args :args} m-obj]
-                (loop [it (.iterator (.query (.cache ignite (my-cache-name schema_name table_name)) (doto (SqlFieldsQuery. sql)
-                                                                                                                   (.setArgs (to-array select-args))
-                                                                                                                   (.setLazy true)))) lst-rs []]
-                    (if (.hasNext it)
-                        (if-let [row (.next it)]
-                            (recur it (conj lst-rs (MyLogCache. (my-cache-name schema_name table_name) schema_name table_name (my-smart-db/get-update-key row (filter #(-> % :is-pk) query-lst)) (my-smart-db/get-update-value ignite group_id row (filter #(false? (-> % :is-pk)) query-lst) {:dic {}, :keys []} items) (SqlType/UPDATE)))))
-                        lst-rs))))
-        ))
+    (my-smart-db/update-to-cache-no-authority ignite group_id lst nil))
+
+;(defn delete-to-cache [ignite group_id lst]
+;    (if-let [m-obj (my-delete/my_delete_obj ignite group_id lst {})]
+;        (if (contains? m-obj :k-v)
+;            (let [{schema_name :schema_name table_name :table_name k-v :k-v select-args :args} m-obj]
+;                [(MyLogCache. (my-cache-name schema_name table_name) schema_name table_name (my-smart-db/get-update-k-v-key ignite group_id k-v select-args) nil (SqlType/DELETE))])
+;            (let [{schema_name :schema_name table_name :table_name sql :sql select-args :args pk_lst :pk_lst} m-obj]
+;                (loop [it (.iterator (.query (.cache ignite (my-cache-name schema_name table_name)) (doto (SqlFieldsQuery. sql)
+;                                                                                                        (.setArgs (to-array select-args))
+;                                                                                                        (.setLazy true)))) lst-rs []]
+;                    (if (.hasNext it)
+;                        (if-let [row (.next it)]
+;                            (do
+;                                ;(println m-obj)
+;                                ;(println pk_lst)
+;                                ;(println (MyLogCache. table_name schema_name table_name (my-smart-db/get-delete-key row pk_lst) nil (SqlType/DELETE)))
+;                                ;(println "**********************")
+;                                (recur it (conj lst-rs (MyLogCache. (my-cache-name schema_name table_name) schema_name table_name (my-smart-db/get-delete-key row pk_lst) nil (SqlType/DELETE)))))
+;                            ;(recur it (conj lst-rs (MyLogCache. (my-cache-name schema_name table_name) schema_name table_name (my-smart-db/get-delete-key row pk_lst) nil (SqlType/DELETE))))
+;                            )
+;                        lst-rs))))
+;        )
+;    )
 
 (defn delete-to-cache [ignite group_id lst]
-    (if-let [m-obj (my-delete/my_delete_obj ignite group_id lst {})]
-        (if (contains? m-obj :k-v)
-            (let [{schema_name :schema_name table_name :table_name k-v :k-v select-args :args} m-obj]
-                [(MyLogCache. (my-cache-name schema_name table_name) schema_name table_name (my-smart-db/get-update-k-v-key ignite group_id k-v select-args) nil (SqlType/DELETE))])
-            (let [{schema_name :schema_name table_name :table_name sql :sql select-args :args pk_lst :pk_lst} m-obj]
-                (loop [it (.iterator (.query (.cache ignite (my-cache-name schema_name table_name)) (doto (SqlFieldsQuery. sql)
-                                                                                                                   (.setArgs (to-array select-args))
-                                                                                                                   (.setLazy true)))) lst-rs []]
-                    (if (.hasNext it)
-                        (if-let [row (.next it)]
-                            (do
-                                ;(println m-obj)
-                                ;(println pk_lst)
-                                ;(println (MyLogCache. table_name schema_name table_name (my-smart-db/get-delete-key row pk_lst) nil (SqlType/DELETE)))
-                                ;(println "**********************")
-                                (recur it (conj lst-rs (MyLogCache. (my-cache-name schema_name table_name) schema_name table_name (my-smart-db/get-delete-key row pk_lst) nil (SqlType/DELETE)))))
-                            ;(recur it (conj lst-rs (MyLogCache. (my-cache-name schema_name table_name) schema_name table_name (my-smart-db/get-delete-key row pk_lst) nil (SqlType/DELETE))))
-                            )
-                        lst-rs))))
-        )
-    )
+    (my-smart-db/delete-to-cache ignite group_id lst nil))
+
+;(defn delete-to-cache-no-authority [ignite group_id lst]
+;    (if-let [m-obj (my-delete/my_delete_obj-no-authority ignite group_id lst {})]
+;        (if (contains? m-obj :k-v)
+;            (let [{schema_name :schema_name table_name :table_name k-v :k-v select-args :args} m-obj]
+;                [(MyLogCache. (my-cache-name schema_name table_name) schema_name table_name (my-smart-db/get-update-k-v-key ignite group_id k-v select-args) nil (SqlType/DELETE))])
+;            (let [{schema_name :schema_name table_name :table_name sql :sql select-args :args pk_lst :pk_lst} m-obj]
+;                (loop [it (.iterator (.query (.cache ignite (my-cache-name schema_name table_name)) (doto (SqlFieldsQuery. sql)
+;                                                                                                        (.setArgs (to-array select-args))
+;                                                                                                        (.setLazy true)))) lst-rs []]
+;                    (if (.hasNext it)
+;                        (if-let [row (.next it)]
+;                            (recur it (conj lst-rs (MyLogCache. (my-cache-name schema_name table_name) schema_name table_name (my-smart-db/get-delete-key row pk_lst) nil (SqlType/DELETE)))))
+;                        lst-rs))))
+;        ))
 
 (defn delete-to-cache-no-authority [ignite group_id lst]
-    (if-let [m-obj (my-delete/my_delete_obj-no-authority ignite group_id lst {})]
-        (if (contains? m-obj :k-v)
-            (let [{schema_name :schema_name table_name :table_name k-v :k-v select-args :args} m-obj]
-                [(MyLogCache. (my-cache-name schema_name table_name) schema_name table_name (my-smart-db/get-update-k-v-key ignite group_id k-v select-args) nil (SqlType/DELETE))])
-            (let [{schema_name :schema_name table_name :table_name sql :sql select-args :args pk_lst :pk_lst} m-obj]
-                (loop [it (.iterator (.query (.cache ignite (my-cache-name schema_name table_name)) (doto (SqlFieldsQuery. sql)
-                                                                                                                   (.setArgs (to-array select-args))
-                                                                                                                   (.setLazy true)))) lst-rs []]
-                    (if (.hasNext it)
-                        (if-let [row (.next it)]
-                            (recur it (conj lst-rs (MyLogCache. (my-cache-name schema_name table_name) schema_name table_name (my-smart-db/get-delete-key row pk_lst) nil (SqlType/DELETE)))))
-                        lst-rs))))
-        ))
+    (my-smart-db/delete-to-cache-no-authority ignite group_id lst nil))
 
 (defn query-sql-no-args [ignite group_id lst]
     (cond (my-lexical/is-eq? "select" (first lst)) (if-let [ast (my-select-plus/sql-to-ast lst)]
