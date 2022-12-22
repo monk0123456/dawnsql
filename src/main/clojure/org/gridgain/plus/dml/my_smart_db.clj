@@ -348,15 +348,41 @@
 ;    )
 
 (defn insert-to-cache-no-authority-lst [ignite group_id lst args]
-    (insert-to-cache-no-authority-lst-sub ignite group_id (my-select-plus/my-get-items lst) args))
+    (try
+        (insert-to-cache-no-authority-lst-sub ignite group_id (my-select-plus/my-get-items lst) args)
+        (catch Exception e
+            (if (re-find #"[\u4e00-\u9fa5]" (.getMessage e))
+                (throw (Exception. "Insert 语句字符串错误！请仔细检查！"))
+                (throw e))
+            )))
 
 (defn insert-to-cache-no-authority [ignite group_id sql args]
-    (insert-to-cache-no-authority-lst ignite group_id (my-lexical/to-back sql) args))
+    (try
+        (insert-to-cache-no-authority-lst ignite group_id (my-lexical/to-back sql) args)
+        (catch Exception e
+            (if (re-find #"[\u4e00-\u9fa5]" (.getMessage e))
+                (throw (Exception. "Insert 语句字符串错误！请仔细检查！"))
+                (throw e))
+            )))
 
 (defn update-to-cache [ignite group_id sql args]
-    (if (some? args)
-        (let [args-dic (args-to-dic args)]
-            (if-let [m-obj (my-update/my_update_obj ignite group_id (get-args-to-lst (my-lexical/my-to-lst sql) (-> args-dic :keys)) (-> args-dic :dic))]
+    (try
+        (if (some? args)
+            (let [args-dic (args-to-dic args)]
+                (if-let [m-obj (my-update/my_update_obj ignite group_id (get-args-to-lst (my-lexical/my-to-lst sql) (-> args-dic :keys)) (-> args-dic :dic))]
+                    (if-let [{schema_name :schema_name table_name :table_name query-lst :query-lst sql :sql items :items select-args :args lst-ast :lst-ast} m-obj]
+                        (if (nil? lst-ast)
+                            (loop [it (.iterator (.query (.cache ignite (my-lexical/my-cache-name schema_name table_name)) (doto (SqlFieldsQuery. sql)
+                                                                                                                               (.setArgs (to-array select-args))
+                                                                                                                               (.setLazy true)))) lst-rs []]
+                                (if (.hasNext it)
+                                    (if-let [row (.next it)]
+                                        (recur it (conj lst-rs (MyLogCache. (my-lexical/my-cache-name schema_name table_name) schema_name table_name (get-update-key row (filter #(-> % :is-pk) query-lst)) (get-update-value ignite group_id row (filter #(false? (-> % :is-pk)) query-lst) args-dic items) (SqlType/UPDATE))))
+                                        )
+                                    lst-rs))
+                            [(MyLogCache. (my-lexical/my-cache-name schema_name table_name) schema_name table_name (get-update-lst-ast ignite group_id lst-ast args-dic) (get-update-lst-ast-value ignite group_id args-dic items) (SqlType/UPDATE))])
+                        )))
+            (if-let [m-obj (my-update/my_update_obj ignite group_id (get-args-to-lst (my-lexical/my-to-lst sql) []) {})]
                 (if-let [{schema_name :schema_name table_name :table_name query-lst :query-lst sql :sql items :items select-args :args lst-ast :lst-ast} m-obj]
                     (if (nil? lst-ast)
                         (loop [it (.iterator (.query (.cache ignite (my-lexical/my-cache-name schema_name table_name)) (doto (SqlFieldsQuery. sql)
@@ -364,13 +390,32 @@
                                                                                                                            (.setLazy true)))) lst-rs []]
                             (if (.hasNext it)
                                 (if-let [row (.next it)]
-                                    (recur it (conj lst-rs (MyLogCache. (my-lexical/my-cache-name schema_name table_name) schema_name table_name (get-update-key row (filter #(-> % :is-pk) query-lst)) (get-update-value ignite group_id row (filter #(false? (-> % :is-pk)) query-lst) args-dic items) (SqlType/UPDATE))))
-                                    )
+                                    (recur it (conj lst-rs (MyLogCache. (my-lexical/my-cache-name schema_name table_name) schema_name table_name (get-update-key row (filter #(-> % :is-pk) query-lst)) (get-update-value ignite group_id row (filter #(false? (-> % :is-pk)) query-lst) {:dic {}, :keys []} items) (SqlType/UPDATE)))))
+                                lst-rs))
+                        [(MyLogCache. (my-lexical/my-cache-name schema_name table_name) schema_name table_name (get-update-lst-ast ignite group_id lst-ast nil) (get-update-lst-ast-value ignite group_id nil items) (SqlType/UPDATE))])))
+            )
+        (catch Exception e
+            (if (re-find #"[\u4e00-\u9fa5]" (.getMessage e))
+                (throw (Exception. "Update 语句字符串错误！请仔细检查！"))
+                (throw e))
+            )))
+
+(defn update-to-cache-no-authority [ignite group_id sql args]
+    (try
+        (if (some? args)
+            (let [args-dic (args-to-dic args)]
+                (if-let [{schema_name :schema_name table_name :table_name query-lst :query-lst sql :sql items :items select-args :args lst-ast :lst-ast} (my-update/my_update_obj-authority ignite group_id (get-args-to-lst (my-lexical/my-to-lst sql) (-> args-dic :keys)) (-> args-dic :dic))]
+                    (if (nil? lst-ast)
+                        (loop [it (.iterator (.query (.cache ignite (my-lexical/my-cache-name schema_name table_name)) (doto (SqlFieldsQuery. sql)
+                                                                                                                           (.setArgs (to-array select-args))
+                                                                                                                           (.setLazy true)))) lst-rs []]
+                            (if (.hasNext it)
+                                (if-let [row (.next it)]
+                                    (recur it (conj lst-rs (MyLogCache. (my-lexical/my-cache-name schema_name table_name) schema_name table_name (get-update-key row (filter #(-> % :is-pk) query-lst)) (get-update-value ignite group_id row (filter #(false? (-> % :is-pk)) query-lst) args-dic items) (SqlType/UPDATE)))))
                                 lst-rs))
                         [(MyLogCache. (my-lexical/my-cache-name schema_name table_name) schema_name table_name (get-update-lst-ast ignite group_id lst-ast args-dic) (get-update-lst-ast-value ignite group_id args-dic items) (SqlType/UPDATE))])
-                    )))
-        (if-let [m-obj (my-update/my_update_obj ignite group_id (get-args-to-lst (my-lexical/my-to-lst sql) []) {})]
-            (if-let [{schema_name :schema_name table_name :table_name query-lst :query-lst sql :sql items :items select-args :args lst-ast :lst-ast} m-obj]
+                    ))
+            (if-let [{schema_name :schema_name table_name :table_name query-lst :query-lst sql :sql items :items select-args :args lst-ast :lst-ast} (my-update/my_update_obj-authority ignite group_id (get-args-to-lst (my-lexical/my-to-lst sql) []) {})]
                 (if (nil? lst-ast)
                     (loop [it (.iterator (.query (.cache ignite (my-lexical/my-cache-name schema_name table_name)) (doto (SqlFieldsQuery. sql)
                                                                                                                        (.setArgs (to-array select-args))
@@ -379,39 +424,29 @@
                             (if-let [row (.next it)]
                                 (recur it (conj lst-rs (MyLogCache. (my-lexical/my-cache-name schema_name table_name) schema_name table_name (get-update-key row (filter #(-> % :is-pk) query-lst)) (get-update-value ignite group_id row (filter #(false? (-> % :is-pk)) query-lst) {:dic {}, :keys []} items) (SqlType/UPDATE)))))
                             lst-rs))
-                    [(MyLogCache. (my-lexical/my-cache-name schema_name table_name) schema_name table_name (get-update-lst-ast ignite group_id lst-ast nil) (get-update-lst-ast-value ignite group_id nil items) (SqlType/UPDATE))])))
-        ))
-
-(defn update-to-cache-no-authority [ignite group_id sql args]
-    (if (some? args)
-        (let [args-dic (args-to-dic args)]
-            (if-let [{schema_name :schema_name table_name :table_name query-lst :query-lst sql :sql items :items select-args :args lst-ast :lst-ast} (my-update/my_update_obj-authority ignite group_id (get-args-to-lst (my-lexical/my-to-lst sql) (-> args-dic :keys)) (-> args-dic :dic))]
-                (if (nil? lst-ast)
-                    (loop [it (.iterator (.query (.cache ignite (my-lexical/my-cache-name schema_name table_name)) (doto (SqlFieldsQuery. sql)
-                                                                                                                       (.setArgs (to-array select-args))
-                                                                                                                       (.setLazy true)))) lst-rs []]
-                        (if (.hasNext it)
-                            (if-let [row (.next it)]
-                                (recur it (conj lst-rs (MyLogCache. (my-lexical/my-cache-name schema_name table_name) schema_name table_name (get-update-key row (filter #(-> % :is-pk) query-lst)) (get-update-value ignite group_id row (filter #(false? (-> % :is-pk)) query-lst) args-dic items) (SqlType/UPDATE)))))
-                            lst-rs))
-                    [(MyLogCache. (my-lexical/my-cache-name schema_name table_name) schema_name table_name (get-update-lst-ast ignite group_id lst-ast args-dic) (get-update-lst-ast-value ignite group_id args-dic items) (SqlType/UPDATE))])
-                ))
-        (if-let [{schema_name :schema_name table_name :table_name query-lst :query-lst sql :sql items :items select-args :args lst-ast :lst-ast} (my-update/my_update_obj-authority ignite group_id (get-args-to-lst (my-lexical/my-to-lst sql) []) {})]
-            (if (nil? lst-ast)
-                (loop [it (.iterator (.query (.cache ignite (my-lexical/my-cache-name schema_name table_name)) (doto (SqlFieldsQuery. sql)
-                                                                                                                   (.setArgs (to-array select-args))
-                                                                                                                   (.setLazy true)))) lst-rs []]
-                    (if (.hasNext it)
-                        (if-let [row (.next it)]
-                            (recur it (conj lst-rs (MyLogCache. (my-lexical/my-cache-name schema_name table_name) schema_name table_name (get-update-key row (filter #(-> % :is-pk) query-lst)) (get-update-value ignite group_id row (filter #(false? (-> % :is-pk)) query-lst) {:dic {}, :keys []} items) (SqlType/UPDATE)))))
-                        lst-rs))
-                [(MyLogCache. (my-lexical/my-cache-name schema_name table_name) schema_name table_name (get-update-lst-ast ignite group_id lst-ast nil) (get-update-lst-ast-value ignite group_id nil items) (SqlType/UPDATE))]))
-        ))
+                    [(MyLogCache. (my-lexical/my-cache-name schema_name table_name) schema_name table_name (get-update-lst-ast ignite group_id lst-ast nil) (get-update-lst-ast-value ignite group_id nil items) (SqlType/UPDATE))]))
+            )
+        (catch Exception e
+            (if (re-find #"[\u4e00-\u9fa5]" (.getMessage e))
+                (throw (Exception. "Update 语句字符串错误！请仔细检查！"))
+                (throw e))
+            )))
 
 (defn delete-to-cache [ignite group_id sql args]
-    (if (some? args)
-        (let [args-dic (args-to-dic args)]
-            (if-let [{schema_name :schema_name table_name :table_name sql :sql select-args :args pk_lst :pk_lst lst-ast :lst-ast} (my-delete/my_delete_obj ignite group_id (get-args-to-lst (my-lexical/my-to-lst sql) (-> args-dic :keys)) (-> args-dic :dic))]
+    (try
+        (if (some? args)
+            (let [args-dic (args-to-dic args)]
+                (if-let [{schema_name :schema_name table_name :table_name sql :sql select-args :args pk_lst :pk_lst lst-ast :lst-ast} (my-delete/my_delete_obj ignite group_id (get-args-to-lst (my-lexical/my-to-lst sql) (-> args-dic :keys)) (-> args-dic :dic))]
+                    (if (nil? lst-ast)
+                        (loop [it (.iterator (.query (.cache ignite (my-lexical/my-cache-name schema_name table_name)) (doto (SqlFieldsQuery. sql)
+                                                                                                                           (.setArgs (to-array select-args))
+                                                                                                                           (.setLazy true)))) lst-rs []]
+                            (if (.hasNext it)
+                                (if-let [row (.next it)]
+                                    (recur it (conj lst-rs (MyLogCache. (my-lexical/my-cache-name schema_name table_name) schema_name table_name (get-delete-key row pk_lst) nil (SqlType/DELETE)))))
+                                lst-rs))
+                        [(MyLogCache. (my-lexical/my-cache-name schema_name table_name) schema_name table_name (get-update-lst-ast ignite group_id lst-ast args-dic) nil (SqlType/DELETE))])))
+            (if-let [{schema_name :schema_name table_name :table_name sql :sql select-args :args pk_lst :pk_lst lst-ast :lst-ast} (my-delete/my_delete_obj ignite group_id (my-lexical/my-to-lst sql) {})]
                 (if (nil? lst-ast)
                     (loop [it (.iterator (.query (.cache ignite (my-lexical/my-cache-name schema_name table_name)) (doto (SqlFieldsQuery. sql)
                                                                                                                        (.setArgs (to-array select-args))
@@ -420,23 +455,30 @@
                             (if-let [row (.next it)]
                                 (recur it (conj lst-rs (MyLogCache. (my-lexical/my-cache-name schema_name table_name) schema_name table_name (get-delete-key row pk_lst) nil (SqlType/DELETE)))))
                             lst-rs))
-                    [(MyLogCache. (my-lexical/my-cache-name schema_name table_name) schema_name table_name (get-update-lst-ast ignite group_id lst-ast args-dic) nil (SqlType/DELETE))])))
-        (if-let [{schema_name :schema_name table_name :table_name sql :sql select-args :args pk_lst :pk_lst lst-ast :lst-ast} (my-delete/my_delete_obj ignite group_id (my-lexical/my-to-lst sql) {})]
-            (if (nil? lst-ast)
-                (loop [it (.iterator (.query (.cache ignite (my-lexical/my-cache-name schema_name table_name)) (doto (SqlFieldsQuery. sql)
-                                                                                                                   (.setArgs (to-array select-args))
-                                                                                                                   (.setLazy true)))) lst-rs []]
-                    (if (.hasNext it)
-                        (if-let [row (.next it)]
-                            (recur it (conj lst-rs (MyLogCache. (my-lexical/my-cache-name schema_name table_name) schema_name table_name (get-delete-key row pk_lst) nil (SqlType/DELETE)))))
-                        lst-rs))
-                [(MyLogCache. (my-lexical/my-cache-name schema_name table_name) schema_name table_name (get-update-lst-ast ignite group_id lst-ast nil) nil (SqlType/DELETE))])
+                    [(MyLogCache. (my-lexical/my-cache-name schema_name table_name) schema_name table_name (get-update-lst-ast ignite group_id lst-ast nil) nil (SqlType/DELETE))])
+                ))
+        (catch Exception e
+            (if (re-find #"[\u4e00-\u9fa5]" (.getMessage e))
+                (throw (Exception. "Delete 语句字符串错误！请仔细检查！"))
+                (throw e))
             )))
 
 (defn delete-to-cache-no-authority [ignite group_id sql args]
-    (if (some? args)
-        (let [args-dic (args-to-dic args)]
-            (if-let [{schema_name :schema_name table_name :table_name sql :sql select-args :args pk_lst :pk_lst lst-ast :lst-ast} (my-delete/my_delete_obj-no-authority ignite group_id (get-args-to-lst (my-lexical/my-to-lst sql) (-> args-dic :keys)) (-> args-dic :dic))]
+    (try
+        (if (some? args)
+            (let [args-dic (args-to-dic args)]
+                (if-let [{schema_name :schema_name table_name :table_name sql :sql select-args :args pk_lst :pk_lst lst-ast :lst-ast} (my-delete/my_delete_obj-no-authority ignite group_id (get-args-to-lst (my-lexical/my-to-lst sql) (-> args-dic :keys)) (-> args-dic :dic))]
+                    (if (nil? lst-ast)
+                        (loop [it (.iterator (.query (.cache ignite (my-lexical/my-cache-name schema_name table_name)) (doto (SqlFieldsQuery. sql)
+                                                                                                                           (.setArgs (to-array select-args))
+                                                                                                                           (.setLazy true)))) lst-rs []]
+                            (if (.hasNext it)
+                                (if-let [row (.next it)]
+                                    (recur it (conj lst-rs (MyLogCache. (my-lexical/my-cache-name schema_name table_name) schema_name table_name (get-delete-key row pk_lst) nil (SqlType/DELETE)))))
+                                lst-rs))
+                        [(MyLogCache. (my-lexical/my-cache-name schema_name table_name) schema_name table_name (get-update-lst-ast ignite group_id lst-ast args-dic) nil (SqlType/DELETE))])
+                    ))
+            (if-let [{schema_name :schema_name table_name :table_name sql :sql select-args :args pk_lst :pk_lst lst-ast :lst-ast} (my-delete/my_delete_obj-no-authority ignite group_id (my-lexical/my-to-lst sql) {})]
                 (if (nil? lst-ast)
                     (loop [it (.iterator (.query (.cache ignite (my-lexical/my-cache-name schema_name table_name)) (doto (SqlFieldsQuery. sql)
                                                                                                                        (.setArgs (to-array select-args))
@@ -445,18 +487,12 @@
                             (if-let [row (.next it)]
                                 (recur it (conj lst-rs (MyLogCache. (my-lexical/my-cache-name schema_name table_name) schema_name table_name (get-delete-key row pk_lst) nil (SqlType/DELETE)))))
                             lst-rs))
-                    [(MyLogCache. (my-lexical/my-cache-name schema_name table_name) schema_name table_name (get-update-lst-ast ignite group_id lst-ast args-dic) nil (SqlType/DELETE))])
-                ))
-        (if-let [{schema_name :schema_name table_name :table_name sql :sql select-args :args pk_lst :pk_lst lst-ast :lst-ast} (my-delete/my_delete_obj-no-authority ignite group_id (my-lexical/my-to-lst sql) {})]
-            (if (nil? lst-ast)
-                (loop [it (.iterator (.query (.cache ignite (my-lexical/my-cache-name schema_name table_name)) (doto (SqlFieldsQuery. sql)
-                                                                                                                   (.setArgs (to-array select-args))
-                                                                                                                   (.setLazy true)))) lst-rs []]
-                    (if (.hasNext it)
-                        (if-let [row (.next it)]
-                            (recur it (conj lst-rs (MyLogCache. (my-lexical/my-cache-name schema_name table_name) schema_name table_name (get-delete-key row pk_lst) nil (SqlType/DELETE)))))
-                        lst-rs))
-                [(MyLogCache. (my-lexical/my-cache-name schema_name table_name) schema_name table_name (get-update-lst-ast ignite group_id lst-ast nil) nil (SqlType/DELETE))]))))
+                    [(MyLogCache. (my-lexical/my-cache-name schema_name table_name) schema_name table_name (get-update-lst-ast ignite group_id lst-ast nil) nil (SqlType/DELETE))])))
+        (catch Exception e
+            (if (re-find #"[\u4e00-\u9fa5]" (.getMessage e))
+                (throw (Exception. "Delete 语句字符串错误！请仔细检查！"))
+                (throw e))
+            )))
 
 ;(defn re-ht [ht]
 ;    (letfn [(my-re-ht [ht]
