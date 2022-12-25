@@ -208,7 +208,7 @@ public class MyCacheExUtil implements Serializable {
                     Object key = convertToKey(ignite, logCache);
                     IgniteCache igniteCache = myIgniteCache.withKeepBinary();
                     BinaryObject binaryObject = (BinaryObject) igniteCache.get(key);
-                    if (isLstKv(logCache.getValue())) {
+                    if (binaryObject != null && isLstKv(logCache.getValue())) {
                         BinaryObjectBuilder binaryObjectBuilder = binaryObject.toBuilder();
                         for (MyKeyValue m : (List<MyKeyValue>) logCache.getValue()) {
                             binaryObjectBuilder.setField(m.getName(), m.getValue());
@@ -285,7 +285,14 @@ public class MyCacheExUtil implements Serializable {
     {
         Object key = null;
         if (isLstKv(myLogCache.getKey())) {
-            key = MyCacheExUtil.getKeys(ignite, myLogCache.getCache_name(), (List<MyKeyValue>)myLogCache.getKey());
+            List<MyKeyValue> lst = (List<MyKeyValue>)myLogCache.getKey();
+            if (lst.size() > 1) {
+                key = MyCacheExUtil.getKeys(ignite, myLogCache.getCache_name(), lst);
+            }
+            else if (lst.size() == 1)
+            {
+                key = lst.get(0).getValue();
+            }
         } else {
             key = myLogCache.getKey();
         }

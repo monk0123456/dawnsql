@@ -306,11 +306,17 @@
                         (contains? m :item_name) (item-to-line dic-args m)
                         (contains? m :table_name) (table-to-line ignite group_id dic-args m)
                         (contains? m :exists) (let [{sql :sql args :args} (token-to-sql ignite group_id dic-args (get (get m :select_sql) :parenthesis))]
-                                                  {:sql (concat [(get m :exists) "("] sql [")"]) :args args})
+                                                  (if (string? sql)
+                                                      {:sql (concat [(get m :exists) "("] [sql] [")"]) :args args}
+                                                      {:sql (concat [(get m :exists) "("] sql [")"]) :args args}))
                         (contains? m :parenthesis) (let [{sql :sql args :args} (token-to-sql ignite group_id dic-args (get m :parenthesis))]
                                                        (if (contains? m :alias)
-                                                           {:sql (concat ["("] sql [")" " " (-> m :alias)]) :args args}
-                                                           {:sql (concat ["("] sql [")"]) :args args}))
+                                                           (if (string? sql)
+                                                               {:sql (concat ["("] [sql] [")" " " (-> m :alias)]) :args args}
+                                                               {:sql (concat ["("] sql [")" " " (-> m :alias)]) :args args})
+                                                           (if (string? sql)
+                                                               {:sql (concat ["("] [sql] [")"]) :args args}
+                                                               {:sql (concat ["("] sql [")"]) :args args})))
                         (contains? m :case-when) (case-when-line ignite group_id dic-args m)
                         (contains? m :exists_symbol) {:sql (get m :exists_symbol) :args nil}
                         :else

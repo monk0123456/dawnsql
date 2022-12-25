@@ -351,7 +351,7 @@
     (try
         (insert-to-cache-no-authority-lst-sub ignite group_id (my-select-plus/my-get-items lst) args)
         (catch Exception e
-            (if (re-find #"[\u4e00-\u9fa5]" (.getMessage e))
+            (if (not (re-find #"[\u4e00-\u9fa5]" (.getMessage e)))
                 (throw (Exception. "Insert 语句字符串错误！请仔细检查！"))
                 (throw e))
             )))
@@ -360,7 +360,7 @@
     (try
         (insert-to-cache-no-authority-lst ignite group_id (my-lexical/to-back sql) args)
         (catch Exception e
-            (if (re-find #"[\u4e00-\u9fa5]" (.getMessage e))
+            (if (not (re-find #"[\u4e00-\u9fa5]" (.getMessage e)))
                 (throw (Exception. "Insert 语句字符串错误！请仔细检查！"))
                 (throw e))
             )))
@@ -395,7 +395,7 @@
                         [(MyLogCache. (my-lexical/my-cache-name schema_name table_name) schema_name table_name (get-update-lst-ast ignite group_id lst-ast nil) (get-update-lst-ast-value ignite group_id nil items) (SqlType/UPDATE))])))
             )
         (catch Exception e
-            (if (re-find #"[\u4e00-\u9fa5]" (.getMessage e))
+            (if (not (re-find #"[\u4e00-\u9fa5]" (.getMessage e)))
                 (throw (Exception. "Update 语句字符串错误！请仔细检查！"))
                 (throw e))
             )))
@@ -427,7 +427,7 @@
                     [(MyLogCache. (my-lexical/my-cache-name schema_name table_name) schema_name table_name (get-update-lst-ast ignite group_id lst-ast nil) (get-update-lst-ast-value ignite group_id nil items) (SqlType/UPDATE))]))
             )
         (catch Exception e
-            (if (re-find #"[\u4e00-\u9fa5]" (.getMessage e))
+            (if (not (re-find #"[\u4e00-\u9fa5]" (.getMessage e)))
                 (throw (Exception. "Update 语句字符串错误！请仔细检查！"))
                 (throw e))
             )))
@@ -458,7 +458,7 @@
                     [(MyLogCache. (my-lexical/my-cache-name schema_name table_name) schema_name table_name (get-update-lst-ast ignite group_id lst-ast nil) nil (SqlType/DELETE))])
                 ))
         (catch Exception e
-            (if (re-find #"[\u4e00-\u9fa5]" (.getMessage e))
+            (if (not (re-find #"[\u4e00-\u9fa5]" (.getMessage e)))
                 (throw (Exception. "Delete 语句字符串错误！请仔细检查！"))
                 (throw e))
             )))
@@ -489,7 +489,7 @@
                             lst-rs))
                     [(MyLogCache. (my-lexical/my-cache-name schema_name table_name) schema_name table_name (get-update-lst-ast ignite group_id lst-ast nil) nil (SqlType/DELETE))])))
         (catch Exception e
-            (if (re-find #"[\u4e00-\u9fa5]" (.getMessage e))
+            (if (not (re-find #"[\u4e00-\u9fa5]" (.getMessage e)))
                 (throw (Exception. "Delete 语句字符串错误！请仔细检查！"))
                 (throw e))
             )))
