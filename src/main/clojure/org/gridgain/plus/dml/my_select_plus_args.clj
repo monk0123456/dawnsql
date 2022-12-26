@@ -310,13 +310,16 @@
                                                       {:sql (concat [(get m :exists) "("] [sql] [")"]) :args args}
                                                       {:sql (concat [(get m :exists) "("] sql [")"]) :args args}))
                         (contains? m :parenthesis) (let [{sql :sql args :args} (token-to-sql ignite group_id dic-args (get m :parenthesis))]
-                                                       (if (contains? m :alias)
-                                                           (if (string? sql)
-                                                               {:sql (concat ["("] [sql] [")" " " (-> m :alias)]) :args args}
-                                                               {:sql (concat ["("] sql [")" " " (-> m :alias)]) :args args})
-                                                           (if (string? sql)
-                                                               {:sql (concat ["("] [sql] [")"]) :args args}
-                                                               {:sql (concat ["("] sql [")"]) :args args})))
+                                                       (cond (contains? m :alias) (if (string? sql)
+                                                                                      {:sql (concat ["("] [sql] [")" " " (-> m :alias)]) :args args}
+                                                                                      {:sql (concat ["("] sql [")" " " (-> m :alias)]) :args args})
+                                                             (contains? m :table_alias) (if (string? sql)
+                                                                                      {:sql (concat ["("] [sql] [")" " " (-> m :table_alias)]) :args args}
+                                                                                      {:sql (concat ["("] sql [")" " " (-> m :table_alias)]) :args args})
+                                                             :else
+                                                             (if (string? sql)
+                                                                 {:sql (concat ["("] [sql] [")"]) :args args}
+                                                                 {:sql (concat ["("] sql [")"]) :args args})))
                         (contains? m :case-when) (case-when-line ignite group_id dic-args m)
                         (contains? m :exists_symbol) {:sql (get m :exists_symbol) :args nil}
                         :else
