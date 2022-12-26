@@ -1843,7 +1843,13 @@
     (cond (is-seq? sql) sql
           (string? sql) (to-back sql)))
 
-
+(defn to-vec [sql]
+    (cond (string? sql) [sql]
+          (is-seq? sql) sql
+          (set? sql) sql
+          :else
+          (throw (Exception. "数据类型不是序列或者是字符串"))
+          ))
 
 
 

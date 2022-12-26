@@ -260,7 +260,7 @@
                 (loop [[f & r] m lst-sql [] lst-args []]
                     (if (some? f)
                         (let [{sql :sql args :args} f]
-                            (recur r (concat lst-sql [sql]) (concat lst-args args))
+                            (recur r (concat lst-sql (my-lexical/to-vec sql)) (concat lst-args args))
                             )
                         {:sql lst-sql :args lst-args})))
             (lst-token-to-line
@@ -291,8 +291,8 @@
                         (contains? m :keyword) {:sql (get m :keyword) :args nil} ;(get m :keyword)
                         (contains? m :operation) (let [{sql :sql args :args} (get-map-token-to-sql (map (partial token-to-sql ignite group_id dic-args) (get m :operation)))]
                                                      (if (contains? m :alias)
-                                                         {:sql (concat sql [(-> m :alias)]) :args args}
-                                                         {sql :sql args :args}))
+                                                         {:sql (concat (my-lexical/to-vec sql) [(-> m :alias)]) :args args}
+                                                         {:sql sql :args args}))
                         (contains? m :comparison_symbol) {:sql (get m :comparison_symbol) :args nil} ; (get m :comparison_symbol)
                         (contains? m :in_symbol) {:sql (get m :in_symbol) :args nil} ; (get m :in_symbol)
                         (contains? m :operation_symbol) {:sql (get m :operation_symbol) :args nil} ; (get m :operation_symbol)

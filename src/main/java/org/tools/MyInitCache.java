@@ -46,7 +46,7 @@ public class MyInitCache {
         ignite.getOrCreateCache(cfg_sys_view_ast);
 
         // insert 语句中要找到表的定义 "table_ast"
-        CacheConfiguration<MyViewAstPK, PersistentArrayMap> cfg_my_select_view_ast = new CacheConfiguration<>();
+        CacheConfiguration<MyViewAstPK, LazySeq> cfg_my_select_view_ast = new CacheConfiguration<>();
         cfg_my_select_view_ast.setCacheMode(CacheMode.REPLICATED);
         cfg_my_select_view_ast.setAtomicityMode(CacheAtomicityMode.ATOMIC);
         //cfg_my_select_view_ast.setDataRegionName("Near_Caches_Region_Eviction");
