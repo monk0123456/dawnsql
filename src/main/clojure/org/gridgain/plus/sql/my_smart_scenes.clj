@@ -3,6 +3,7 @@
         [org.gridgain.plus.dml.select-lexical :as my-lexical]
         [org.gridgain.plus.dml.my-select-plus :as my-select-plus]
         [org.gridgain.plus.dml.my-smart-token-clj :as my-smart-token-clj]
+        [org.gridgain.plus.tools.my-user-group :as my-user-group]
         [org.gridgain.plus.dml.my-insert :as my-insert]
         [org.gridgain.plus.dml.my-update :as my-update]
         [org.gridgain.plus.dml.my-delete :as my-delete]
@@ -31,18 +32,26 @@
         ;          ^:static [myInit [] void]
         ;          ^:static [myShowCode [org.apache.ignite.Ignite Long String] String]
         ;          ^:static [invokeScenesLink [org.apache.ignite.Ignite Long String java.util.List] Object]]
-        :methods [[invokeScenes [org.apache.ignite.Ignite Object String java.util.List] Object]
+        :methods [[invokeScenes [org.apache.ignite.Ignite String String java.util.List] java.util.List]
+                  [invokeFunc [org.apache.ignite.Ignite String java.util.List] java.util.List]
                   [myInvokeScenes [org.apache.ignite.Ignite Long Long] Object]
                   [myShowCode [org.apache.ignite.Ignite Long String] String]
-                  [invokeScenesLink [org.apache.ignite.Ignite Object String java.util.List] Object]]
+                  [invokeScenesLink [org.apache.ignite.Ignite Object String java.util.List] java.util.List]]
         ))
 
 ; 调用 func
 (defn my-invoke-func [^Ignite ignite ^String method-name ps]
-    (MyPlusUtil/invokeFuncObj ignite (str/lower-case method-name) (to-array ps)))
+    (if-let [m (MyPlusUtil/invokeFuncObj ignite (str/lower-case method-name) (to-array ps))]
+        (doto (ArrayList.) (.add m) (.add (type m)))))
 
 (defn my-invoke-func-no-ps [^Ignite ignite ^String method-name]
-    (MyPlusUtil/invokeFuncNoPs ignite (str/lower-case method-name)))
+    (if-let [m (MyPlusUtil/invokeFuncNoPs ignite (str/lower-case method-name))]
+        (doto (ArrayList.) (.add m) (.add (type m)))))
+
+(defn -invokeFunc [this ^Ignite ignite ^String method-name ^List ps]
+    (if (my-lexical/not-null-or-empty? ps)
+        (my-invoke-func ignite method-name ps)
+        (my-invoke-func-no-ps ignite method-name)))
 
 ; 获取输入参数和处理后的参数
 (defn get-params [params]
@@ -108,11 +117,13 @@
         (apply (eval (read-string code)) ignite group_id ps)))
 
 ; 首先调用方法，如果不存在，在从 cache 中读取数据在执行
-(defn -invokeScenes [^Ignite ignite group_id ^String method-name ^List ps]
-    (my-invoke-scenes ignite group_id method-name ps))
+(defn -invokeScenes [this ^Ignite ignite ^String user_token ^String method-name ^List ps]
+    (let [m (my-invoke-scenes ignite (my-user-group/get_user_group ignite user_token) method-name ps)]
+        (doto (ArrayList.) (.add m) (.add (type m)))))
 
-(defn -invokeScenesLink [^Ignite ignite group_id ^String method-name ^List ps]
-    (my-invoke-scenes-link ignite group_id method-name ps))
+(defn -invokeScenesLink [this ^Ignite ignite ^String user_token ^String method-name ^List ps]
+    (let [m (my-invoke-scenes-link ignite (my-user-group/get_user_group ignite user_token) method-name ps)]
+        (doto (ArrayList.) (.add m) (.add (type m)))))
 
 (defn -myInvokeScenes [this ^Ignite ignite ^Long a ^Long b]
     (my-lexical/get-value (apply (eval (read-string "(defn add [ignite a b]\n    (+ a b))")) [nil a b])))

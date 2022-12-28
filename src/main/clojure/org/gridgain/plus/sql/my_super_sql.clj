@@ -171,7 +171,7 @@
             (MyCacheExUtil/dataStream ignite rs))))
 
 (defn super-sql-lst
-    ([^Ignite ignite ^Long group_id ^String userToken ^String schema_name ^String group_type lst] (super-sql-lst ignite [group_id schema_name group_type] lst []))
+    ([^Ignite ignite ^Long group_id ^String userToken ^String schema_name ^String group_type ^String m_user_token lst] (super-sql-lst ignite [group_id schema_name group_type m_user_token] lst []))
     ([^Ignite ignite group_id [lst & r] lst-rs]
      (if (some? lst)
          (if-not (nil? (first lst))
@@ -258,15 +258,15 @@
              (last lst-rs)))))
 
 (defn super-sql [^Ignite ignite ^String userToken ^List lst]
-    (let [[group_id schema_name group_type] (my-user-group/get_user_group ignite userToken)]
+    (let [[group_id schema_name group_type m_user_token] (my-user-group/get_user_group ignite userToken)]
         (if-not (nil? group_id)
-            (super-sql-lst ignite group_id userToken schema_name group_type lst)
+            (super-sql-lst ignite group_id userToken schema_name group_type m_user_token lst)
             (throw (Exception. (format "userToken: %s 不存在！" userToken))))))
 
 (defn super-sql-line [^Ignite ignite ^String userToken ^String line]
-    (let [[group_id schema_name group_type] (my-user-group/get_user_group ignite userToken)]
+    (let [[group_id schema_name group_type m_user_token] (my-user-group/get_user_group ignite userToken)]
         (if-not (nil? group_id)
-            (super-sql-lst ignite group_id userToken schema_name group_type (my-smart-sql/re-super-smart-segment (my-smart-sql/get-my-smart-segment line)))
+            (super-sql-lst ignite group_id userToken schema_name group_type m_user_token (my-smart-sql/re-super-smart-segment (my-smart-sql/get-my-smart-segment line)))
             (throw (Exception. (format "userToken: %s 不存在！" userToken))))))
 
 (defn -recovery_ddl [this ^Ignite ignite ^String line]

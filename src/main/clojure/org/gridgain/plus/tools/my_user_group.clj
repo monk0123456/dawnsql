@@ -1,29 +1,11 @@
 (ns org.gridgain.plus.tools.my-user-group
     (:require
         [org.gridgain.plus.dml.select-lexical :as my-lexical]
-        [org.gridgain.plus.dml.my-select-plus :as my-select]
-        [org.gridgain.plus.dml.my-select-plus-args :as my-select-plus-args]
         [org.gridgain.plus.dml.my-smart-db :as my-smart-db]
         [clojure.core.reducers :as r]
         [clojure.string :as str])
-    (:import (org.apache.ignite Ignite IgniteCache)
-             (org.gridgain.smart MyVar MyLetLayer)
-             (org.apache.ignite.transactions Transaction)
-             (com.google.gson Gson GsonBuilder)
-             (org.tools MyConvertUtil KvSql)
-             (cn.plus.model MyLogCache SqlType)
-             (cn.mysuper.model MyUrlToken)
-             (org.gridgain.dml.util MyCacheExUtil)
-             (org.apache.ignite.cache.query FieldsQueryCursor SqlFieldsQuery)
-             (cn.plus.model.db MyCallScenesPk MyCallScenes MyScenesCache MyScenesCachePk MyScenesParams)
-             (org.gridgain.myservice MyNoSqlFunService)
-             (org.gridgain.jdbc MyJdbc)
-             (org.gridgain.smart.view MyViewAstPK)
-             (java.util ArrayList Date Iterator Hashtable)
-             (java.sql Timestamp)
-             (org.tools MyTools MyFunction)
-             (java.math BigDecimal)
-             (com.google.common.base Strings))
+    (:import (org.gridgain.smart MyVar)
+             (java.util ArrayList Date Iterator Hashtable))
     (:gen-class
         ;:implements [org.gridgain.superservice.INoSqlFun]
         ; 生成 class 的类名
@@ -53,12 +35,12 @@
 (defn get_user_group [ignite user_token]
     (if (.isMultiUserGroup (.configuration ignite))
         (if (my-lexical/is-eq? user_token (.getRoot_token (.configuration ignite)))
-            [0 "MY_META" "all"]
-            (let [group_id [0 "MY_META" "all"]]
+            [0 "MY_META" "all" user_token]
+            (let [group_id [0 "MY_META" "all" (.getRoot_token (.configuration ignite))]]
                 (let [vs (MyVar. (my-lexical/no-sql-get-vs ignite group_id (doto (Hashtable.)
                                                                                (.put "table_name" "user_group_cache")
                                                                                (.put "key" (my-lexical/get-value user_token)))))]
-                    (cond (my-lexical/not-empty? (my-lexical/get-value vs)) (my-lexical/get-value vs)
+                    (cond (my-lexical/not-empty? (my-lexical/get-value vs)) (concat (my-lexical/get-value vs) [user_token])
                           :else (let [rs (MyVar. (my-smart-db/query_sql ignite group_id "select g.id, g.schema_name, g.group_type from my_users_group as g where g.user_token = ?" [(my-lexical/to_arryList [(my-lexical/get-value user_token)])])) result (MyVar. )]
                                     (do
                                         (cond (my-lexical/my-is-iter? rs) (try
@@ -82,9 +64,12 @@
                                               :else
                                               (throw (Exception. "for 循环只能处理列表或者是执行数据库的结果"))
                                               )
-                                        (my-lexical/get-value result)))))))
+                                        (if-let [my-rs (my-lexical/get-value result)]
+                                            (if (and (my-lexical/is-seq? my-rs) (> (count my-rs) 0))
+                                                (concat my-rs [user_token])))
+                                        ))))))
         (if (my-lexical/is-eq? user_token (.getRoot_token (.configuration ignite)))
-            [0 "MY_META" "all"]
+            [0 "MY_META" "all" user_token]
             (throw (Exception. "user_token 错误！"))))
     )
 

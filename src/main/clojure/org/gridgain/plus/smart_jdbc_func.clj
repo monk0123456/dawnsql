@@ -31,6 +31,7 @@
         [org.gridgain.plus.smart-func :as smart-func]
         [org.gridgain.plus.ml.my-ml-train-data :as my-ml-train-data]
         [org.gridgain.plus.ml.my-ml-func :as my-ml-func]
+        [org.gridgain.plus.tools.my-user-group :as my-user-group]
         [clojure.core.reducers :as r]
         [clojure.string :as str]
         [clojure.walk :as w])
@@ -55,7 +56,7 @@
         ; 是否生成 class 的 main 方法
         :main false
         ; 生成 java 静态的方法
-        :methods [^:static [invokeAllFuncScenes [org.apache.ignite.Ignite Object String java.util.List] Object]]
+        :methods [^:static [invokeAllFuncScenes [org.apache.ignite.Ignite String String java.util.List] java.util.List]]
         ))
 
 ; PreparedStatement 调用所有方法 参数用 ? 来传递，
@@ -118,8 +119,9 @@
                   (throw (Exception. (format "%s 不存在，或没有权限！" func-name)))
                   ))))
 
-(defn -invokeAllFuncScenes [^Ignite ignite group_id ^String func-name ^List ps]
-    (invoke-all-func-scenes ignite group_id func-name ps))
+(defn -invokeAllFuncScenes [^Ignite ignite ^String userToken ^String func-name ^List ps]
+    (let [m (invoke-all-func-scenes ignite (my-user-group/get_user_group ignite userToken) func-name ps)]
+        (doto (ArrayList.) (.add m) (.add (type m)))))
 
 
 

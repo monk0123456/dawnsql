@@ -537,7 +537,7 @@
             (if-let [{schema_name :schema_name table_name :table_name pk-data :pk-data lst_table_item :lst_table_item lst_ddl :lst_ddl} (to_ddl_lsts ignite lst (str/lower-case (second group_id)))]
                 (if-not (and (my-lexical/is-eq? schema_name "my_meta") (contains? plus-init-sql/my-grid-tables-set table_name))
                     (if (and (not (my-lexical/is-eq? schema_name "my_meta")) (my-lexical/is-eq? schema_name (second group_id)))
-                        (if-let [lst_dml_table (to_mycachex ignite (get_my_table_lst ignite table_name descrip lst lst_table_item (last group_id)))]
+                        (if-let [lst_dml_table (to_mycachex ignite (get_my_table_lst ignite table_name descrip lst lst_table_item (nth group_id 2)))]
                             (if (true? (.isMultiUserGroup (.configuration ignite)))
                                 (run_ddl_dml ignite lst_ddl lst_dml_table (MyNoSqlCache. "table_ast" schema_name table_name (MySchemaTable. schema_name table_name) pk-data (SqlType/INSERT)) (str/join " " lst)))
                             (throw (Exception. "创建表的语句错误！"))

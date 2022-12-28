@@ -3,6 +3,7 @@
         [org.gridgain.plus.dml.select-lexical :as my-lexical]
         [org.gridgain.plus.dml.my-smart-db :as my-smart-db]
         [org.gridgain.plus.smart-func :as smart-func]
+        [org.gridgain.plus.tools.my-user-group :as my-user-group]
         [clojure.core.reducers :as r]
         [clojure.string :as str])
     (:import (org.apache.ignite Ignite IgniteCache)
@@ -35,7 +36,7 @@
 ; 如果没有查询到，就查询数据库并将查询的结果保存到，缓存中
 (defn get_user_group [ignite group_id user_token]
     (let [vs (MyVar. (my-lexical/no-sql-get-vs ignite group_id (doto (Hashtable.) (.put "table_name" "user_group_cache") (.put "key" (my-lexical/get-value user_token)))))]
-        (cond (my-lexical/not-empty? (my-lexical/get-value vs)) (my-lexical/get-value vs)
+        (cond (my-lexical/not-empty? (my-lexical/get-value vs)) (concat (my-lexical/get-value vs) [user_token])
               :else (let [rs (MyVar. (my-smart-db/query_sql ignite group_id "select g.id, g.schema_name, g.group_type from my_users_group as g where g.user_token = ?" [(my-lexical/to_arryList [(my-lexical/get-value user_token)])])) result (MyVar. )]
                         (do
                             (cond (my-lexical/my-is-iter? rs) (try
@@ -57,7 +58,10 @@
                                                                          (throw e))))
                                   :else
                                   (throw (Exception. "for 循环只能处理列表或者是执行数据库的结果")))
-                            result)))))
+                            (if-let [my-rs (my-lexical/get-value result)]
+                                (if (and (my-lexical/is-seq? my-rs) (> (count my-rs) 0))
+                                    (concat my-rs [user_token])))
+                            )))))
 
 (defn -getUserGroup [this ^Ignite ignite ^Object group_id ^String user_token]
     (my-lexical/get-value (get_user_group ignite group_id user_token)))

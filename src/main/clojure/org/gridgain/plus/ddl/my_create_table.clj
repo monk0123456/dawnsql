@@ -323,7 +323,7 @@
 (defn my_create_table_lst [^Ignite ignite group_id lst]
     (if (= (first group_id) 0)
         (MyDdlUtilEx/saveCache ignite (to_ddl_obj ignite lst (second group_id)))
-        (if (contains? #{"ALL" "DDL"} (str/upper-case (last group_id)))
+        (if (contains? #{"ALL" "DDL"} (str/upper-case (nth group_id 2)))
             (MyDdlUtilEx/saveCache ignite (to_ddl_obj ignite lst (second group_id)))
             (throw (Exception. "该用户组没有创建表的权限！")))
         ))
