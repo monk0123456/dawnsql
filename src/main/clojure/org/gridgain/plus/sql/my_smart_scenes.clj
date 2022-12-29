@@ -75,9 +75,10 @@
         (if-not (nil? m)
             (let [sql-code (.getSql_code m)]
                 (eval (read-string sql-code))
-                (my-lexical/get-value (apply (eval (read-string my-method-name)) ignite group_id ps)))
-            )
-        (my-lexical/get-value (apply (eval (read-string my-method-name)) ignite group_id ps))))
+                (if-let [func (eval (read-string my-method-name))]
+                    (my-lexical/get-value (apply func ignite group_id ps))))
+            (my-lexical/get-value (apply (eval (read-string my-method-name)) ignite group_id ps)))
+        ))
 
 (defn get-call-group-id [^Ignite ignite group_id my-method-name]
     (.get (.cache ignite "call_scenes") (MyCallScenesPk. group_id my-method-name)))
