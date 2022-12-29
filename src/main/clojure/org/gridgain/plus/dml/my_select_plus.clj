@@ -1091,7 +1091,7 @@
                       ))
             (func-link-to-line [ignite group_id m]
                 (let [{sql :sql args :args} (my-lexical/my-func-line-code m)]
-                    (loop [[f & r] args lst-ps [(last group_id)] lst-args []]
+                    (loop [[f & r] args lst-ps [(format "'%s'" (last group_id))] lst-args []]
                         (if (some? f)
                             (recur r (conj lst-ps f) lst-args)
                             (str/join ["my_invoke_link('" sql "'," (str/join "," lst-ps) ")"])))))

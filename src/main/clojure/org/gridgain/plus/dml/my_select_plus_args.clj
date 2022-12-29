@@ -386,7 +386,7 @@
                       ))
             (func-link-to-line [ignite group_id dic-args m]
                 (let [{sql :sql args :args} (my-lexical/my-func-line-code m)]
-                    (loop [[f & r] args lst-ps [(last group_id)] lst-args []]
+                    (loop [[f & r] args lst-ps [(format "'%s'" (last group_id))] lst-args []]
                         (if (some? f)
                             (if (contains? (-> dic-args :dic) f)
                                 (recur r (conj lst-ps "?") (conj lst-args (first (get (-> dic-args :dic) f))))

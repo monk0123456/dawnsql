@@ -60,7 +60,7 @@ public class MyNoSqlUtil {
         return cfg;
     }
 
-    public static CacheConfiguration getNearCfg(final String cacheName, final String mode, final int maxSize, final int backups)
+    public static CacheConfiguration getNearCfg(final String schema_name, final String cacheName, final String mode, final int maxSize, final int backups)
     {
         NearCacheConfiguration<Object, Object> nearCfg = new NearCacheConfiguration<>();
 
@@ -86,7 +86,13 @@ public class MyNoSqlUtil {
             }
         }
         cfg.setAtomicityMode(CacheAtomicityMode.TRANSACTIONAL);
-        cfg.setDataRegionName("Near_Caches_Region_Eviction");
+        if (!Strings.isNullOrEmpty(schema_name) && schema_name.toLowerCase().equals("my_meta")) {
+            cfg.setDataRegionName("MySys_Caches_Region_Eviction");
+        }
+        else
+        {
+            cfg.setDataRegionName("Near_Caches_Region_Eviction");
+        }
         cfg.setName(cacheName);
         cfg.setReadFromBackup(true);
         cfg.setNearConfiguration(nearCfg);
@@ -120,7 +126,7 @@ public class MyNoSqlUtil {
         CacheConfiguration configuration;
         if (is_cache == true)
         {
-            configuration = getNearCfg(cacheName, mode, maxSize, backups);
+            configuration = getNearCfg(ds_name, cacheName, mode, maxSize, backups);
         }
         else
         {
@@ -181,7 +187,7 @@ public class MyNoSqlUtil {
         CacheConfiguration configuration;
         if (is_cache == true)
         {
-            configuration = getNearCfg(cacheName, mode, maxSize, backups);
+            configuration = getNearCfg(schema_name, cacheName, mode, maxSize, backups);
         }
         else
         {
