@@ -183,7 +183,11 @@
 ;            (format "{\"err\": \"%s\"}" (.getMessage e)))))
 
 (defn -executeSqlQuery [this ^String userToken ^String sql ^String ps]
-    (my-executeSqlQuery userToken sql ps))
+    (try
+        (my-executeSqlQuery userToken sql ps)
+        (catch Exception e
+            (MyGson/groupObjToLine (doto (Hashtable.) (.put "err" (.getMessage e))))
+            )))
 
 
 
