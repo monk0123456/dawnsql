@@ -406,7 +406,8 @@
                 (if (false? (.isMultiUserGroup (.configuration ignite)))
                     (cond (my-lexical/is-str-empty? schema_name) "public"
                           (my-lexical/is-eq? schema_name "public") "public"
-                          (my-lexical/is-eq? schema_name "my_meta") "public"
+                          (my-lexical/is-eq? schema_name "my_meta") "my_meta"
+                          (my-lexical/is-eq? schema_name "sys") "sys"
                           :else
                           (throw (Exception. "单用户组只能使用 public")))
                     schema_name))

@@ -856,7 +856,7 @@
                                                                                (.put "table_name" "user_group_cache")
                                                                                (.put "key" (my-lexical/get-value user_token)))))]
                     (cond (my-lexical/not-empty? (my-lexical/get-value vs)) (my-lexical/get-value vs)
-                          :else (let [rs (MyVar. (query_sql ignite group_id "select g.id, g.schema_name, g.group_type from my_users_group as g where g.user_token = ?" [(my-lexical/to_arryList [(my-lexical/get-value user_token)])])) result (MyVar. )]
+                          :else (let [rs (MyVar. (query_sql ignite group_id "select g.id, g.schema_name, g.group_type from my_meta.my_users_group as g where g.user_token = ?" [(my-lexical/to_arryList [(my-lexical/get-value user_token)])])) result (MyVar. )]
                                     (do
                                         (cond (my-lexical/my-is-iter? rs) (try
                                                                               (loop [M-F-v1625-I-Q1626-c-Y (my-lexical/get-my-iter rs)]

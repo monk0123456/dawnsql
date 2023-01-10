@@ -46,7 +46,7 @@
          (str/join lst))))
 
 (defn get-data-set-id-by-group-id [^Ignite ignite ^String group_name]
-    (let [rs (first (.getAll (.query (.cache ignite "my_users_group") (.setArgs (SqlFieldsQuery. "select g.id from my_users_group as g where g.group_name = ?") (to-array [group_name])))))]
+    (let [rs (first (.getAll (.query (.cache ignite "my_users_group") (.setArgs (SqlFieldsQuery. "select g.id from my_meta.my_users_group as g where g.group_name = ?") (to-array [group_name])))))]
         (first rs)))
 
 ;(defn get-data-set-id-by-ds-name [^Ignite ignite ^String schema_name]
@@ -301,7 +301,7 @@
 
 (defn init-job [^Ignite ignite]
     (let [group_id [0 "MY_META" "all"]]
-        (let [rs (my-smart-db/query_sql ignite group_id "select m.job_name, m.group_id, m.cron, m.ps from my_cron m" nil)]
+        (let [rs (my-smart-db/query_sql ignite group_id "select m.job_name, m.group_id, m.cron, m.ps from my_meta.my_cron m" nil)]
             (loop [M-F-v156-I-Q157-c-Y (my-lexical/get-my-iter rs)]
                 (if (.hasNext M-F-v156-I-Q157-c-Y)
                     (let [r (.next M-F-v156-I-Q157-c-Y)]

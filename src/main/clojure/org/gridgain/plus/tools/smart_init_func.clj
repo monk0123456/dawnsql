@@ -37,7 +37,7 @@
 (defn get_user_group [ignite group_id user_token]
     (let [vs (MyVar. (my-lexical/no-sql-get-vs ignite group_id (doto (Hashtable.) (.put "table_name" "user_group_cache") (.put "key" (my-lexical/get-value user_token)))))]
         (cond (my-lexical/not-empty? (my-lexical/get-value vs)) (concat (my-lexical/get-value vs) [user_token])
-              :else (let [rs (MyVar. (my-smart-db/query_sql ignite group_id "select g.id, g.schema_name, g.group_type from my_users_group as g where g.user_token = ?" [(my-lexical/to_arryList [(my-lexical/get-value user_token)])])) result (MyVar. )]
+              :else (let [rs (MyVar. (my-smart-db/query_sql ignite group_id "select g.id, g.schema_name, g.group_type from my_meta.my_users_group as g where g.user_token = ?" [(my-lexical/to_arryList [(my-lexical/get-value user_token)])])) result (MyVar. )]
                         (do
                             (cond (my-lexical/my-is-iter? rs) (try
                                                                   (loop [M-F-v1725-I-Q1726-c-Y (my-lexical/get-my-iter rs)]
@@ -67,7 +67,7 @@
     (my-lexical/get-value (get_user_group ignite group_id user_token)))
 
 (defn get_user_token [ignite group_name]
-    (first (.getAll (.query (.cache ignite "my_users_group") (.setArgs (SqlFieldsQuery. "select m.id, m.user_token from my_users_group m where m.group_name = ?") (to-array [group_name]))))))
+    (first (.getAll (.query (.cache ignite "my_users_group") (.setArgs (SqlFieldsQuery. "select m.id, m.user_token from my_meta.my_users_group m where m.group_name = ?") (to-array [group_name]))))))
 
 (defn -getUserToken [this ^Ignite ignite ^String group_name]
     (get_user_token ignite group_name))
@@ -150,14 +150,14 @@
     (add_user_group ignite group_id group_name user_token group_type schema_name))
 
 (defn update-cache [ignite group_id group_name group_type]
-    (if-let [ids (first (.getAll (.query (.cache ignite "my_users_group") (.setArgs (SqlFieldsQuery. "select m.id from my_users_group m where m.group_name = ?") (to-array [group_name])))))]
+    (if-let [ids (first (.getAll (.query (.cache ignite "my_users_group") (.setArgs (SqlFieldsQuery. "select m.id from my_meta.my_users_group m where m.group_name = ?") (to-array [group_name])))))]
         (let [vs (.get (.cache ignite "my_users_group") (first ids))]
             (MyLogCache. "my_users_group" (first ids) (doto vs (.setGroup_type group_type)) (SqlType/UPDATE)))))
 
 (defn update_user_group [ignite group_id group_name group_type]
     (let [user_token (MyVar. (get_user_token ignite (my-lexical/get-value group_name)))]
         (let [vs (MyVar. (my-lexical/no-sql-get-vs ignite group_id (doto (Hashtable.) (.put "table_name" "user_group_cache") (.put "key" (last (my-lexical/get-value user_token))))))]
-            (cond (nil? (my-lexical/get-value vs)) (if-let [ids (first (.getAll (.query (.cache ignite "my_users_group") (.setArgs (SqlFieldsQuery. "select m.id from my_users_group m where m.group_name = ?") (to-array [group_name])))))]
+            (cond (nil? (my-lexical/get-value vs)) (if-let [ids (first (.getAll (.query (.cache ignite "my_users_group") (.setArgs (SqlFieldsQuery. "select m.id from my_meta.my_users_group m where m.group_name = ?") (to-array [group_name])))))]
                                                        (let [vs (.get (.cache ignite "my_users_group") (first ids))]
                                                            (.replace (.cache ignite "my_users_group") (first ids) (doto vs (.setGroup_type group_type)))))
                   :else (let [new_vs (MyVar. (my-lexical/list-set (my-lexical/get-value vs) 2 (my-lexical/get-value group_type))) lst (MyVar. (my-lexical/to_arryList [(update-cache ignite group_id group_name group_type)]))]
@@ -169,11 +169,11 @@
     (update_user_group ignite group_id group_name group_type))
 
 (defn update-cache-group-name [ignite group_name]
-    (if-let [ids (first (.getAll (.query (.cache ignite "my_users_group") (.setArgs (SqlFieldsQuery. "select m.id from my_users_group m where m.group_name = ?") (to-array [group_name])))))]
+    (if-let [ids (first (.getAll (.query (.cache ignite "my_users_group") (.setArgs (SqlFieldsQuery. "select m.id from my_meta.my_users_group m where m.group_name = ?") (to-array [group_name])))))]
         (MyLogCache. "my_users_group" (first ids) nil (SqlType/DELETE))))
 
 (defn call_scenes-cache [ignite to_group_id]
-    (if-let [ids (first (.getAll (.query (.cache ignite "call_scenes") (.setArgs (SqlFieldsQuery. "select m.group_id, m.scenes_name from call_scenes m where m.to_group_id = ?") (to-array [to_group_id])))))]
+    (if-let [ids (first (.getAll (.query (.cache ignite "call_scenes") (.setArgs (SqlFieldsQuery. "select m.group_id, m.scenes_name from my_meta.call_scenes m where m.to_group_id = ?") (to-array [to_group_id])))))]
         (MyLogCache. "call_scenes" (MyCallScenesPk. (first ids) (second ids)) nil (SqlType/DELETE))))
 
 (defn delete_user_group [ignite group_id group_name]
