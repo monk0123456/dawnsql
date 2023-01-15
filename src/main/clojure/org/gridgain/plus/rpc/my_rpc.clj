@@ -71,7 +71,6 @@
                   (and (string? (first f)) (my-lexical/is-eq? (first f) "delete")) (recur ignite group_id r (conj lst-rs (my-smart-db-line/rpc-query_sql ignite group_id (my-super-sql/cull-semicolon f))) ps my-stm-type)
                   (and (string? (first f)) (my-lexical/is-eq? (first f) "select")) (if (nil? r)
                                                                                        (let [ps-m (re-select-ps ps) my-stm (add-stm-type my-stm-type "select")]
-                                                                                           (println my-stm)
                                                                                            (if (= ps-m "meta")
                                                                                                (recur ignite group_id r (conj lst-rs (my-smart-db-line/rpc_select_sql ignite group_id (my-super-sql/cull-semicolon f) ps-m)) ps-m (doto my-stm (.put "code" (str/join " " (my-super-sql/cull-semicolon f)))))
                                                                                                (recur ignite group_id r (conj lst-rs (my-smart-db-line/rpc_select_sql ignite group_id (my-super-sql/cull-semicolon f) ps-m)) ps-m my-stm)))
