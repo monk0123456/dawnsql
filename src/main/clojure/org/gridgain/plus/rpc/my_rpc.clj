@@ -63,70 +63,70 @@
                 ps)
             ps)))
 
-(defn execute-sql-query-lst [^Ignite ignite group_id [f & r] lst-rs ps my-stm-type]
+(defn execute-sql-query-lst [^Ignite ignite group_id [f & r] lst-rs ps my-stm-type sql]
     (if (some? f)
         (if-not (nil? (first f))
-            (cond (and (string? (first f)) (my-lexical/is-eq? (first f) "insert")) (recur ignite group_id r (conj lst-rs (my-smart-db-line/rpc-query_sql ignite group_id (my-super-sql/cull-semicolon f))) ps my-stm-type)
-                  (and (string? (first f)) (my-lexical/is-eq? (first f) "update")) (recur ignite group_id r (conj lst-rs (my-smart-db-line/rpc-query_sql ignite group_id (my-super-sql/cull-semicolon f))) ps my-stm-type)
-                  (and (string? (first f)) (my-lexical/is-eq? (first f) "delete")) (recur ignite group_id r (conj lst-rs (my-smart-db-line/rpc-query_sql ignite group_id (my-super-sql/cull-semicolon f))) ps my-stm-type)
+            (cond (and (string? (first f)) (my-lexical/is-eq? (first f) "insert")) (recur ignite group_id r (conj lst-rs (my-smart-db-line/rpc-query_sql ignite group_id (my-super-sql/cull-semicolon f))) ps my-stm-type sql)
+                  (and (string? (first f)) (my-lexical/is-eq? (first f) "update")) (recur ignite group_id r (conj lst-rs (my-smart-db-line/rpc-query_sql ignite group_id (my-super-sql/cull-semicolon f))) ps my-stm-type sql)
+                  (and (string? (first f)) (my-lexical/is-eq? (first f) "delete")) (recur ignite group_id r (conj lst-rs (my-smart-db-line/rpc-query_sql ignite group_id (my-super-sql/cull-semicolon f))) ps my-stm-type sql)
                   (and (string? (first f)) (my-lexical/is-eq? (first f) "select")) (if (nil? r)
                                                                                        (let [ps-m (re-select-ps ps) my-stm (add-stm-type my-stm-type "select")]
                                                                                            (if (= ps-m "meta")
-                                                                                               (recur ignite group_id r (conj lst-rs (my-smart-db-line/rpc_select_sql ignite group_id (my-super-sql/cull-semicolon f) ps-m)) ps-m (doto my-stm (.put "code" (str/join " " (my-super-sql/cull-semicolon f)))))
-                                                                                               (recur ignite group_id r (conj lst-rs (my-smart-db-line/rpc_select_sql ignite group_id (my-super-sql/cull-semicolon f) ps-m)) ps-m my-stm)))
-                                                                                       (recur ignite group_id r (conj lst-rs (my-smart-db-line/rpc_select_sql ignite group_id (my-super-sql/cull-semicolon f) ps)) ps my-stm-type))
+                                                                                               (recur ignite group_id r (conj lst-rs (my-smart-db-line/rpc_select_sql ignite group_id (my-super-sql/cull-semicolon f) ps-m)) ps-m (doto my-stm (.put "code" sql)) sql)
+                                                                                               (recur ignite group_id r (conj lst-rs (my-smart-db-line/rpc_select_sql ignite group_id (my-super-sql/cull-semicolon f) ps-m)) ps-m my-stm sql)))
+                                                                                       (recur ignite group_id r (conj lst-rs (my-smart-db-line/rpc_select_sql ignite group_id (my-super-sql/cull-semicolon f) ps)) ps my-stm-type sql))
                   ; create dataset
                   (and (string? (first f)) (my-lexical/is-eq? (first f) "create") (my-lexical/is-eq? (second f) "schema")) (if (true? (.isMultiUserGroup (.configuration ignite)))
                                                                                                                                (let [rs (my-create-dataset/create_data_set ignite group_id (str/join " " (my-super-sql/cull-semicolon f)))]
                                                                                                                                    (if (nil? rs)
-                                                                                                                                       (recur ignite group_id r (conj lst-rs "true") ps (add-stm-type my-stm-type "schema"))
-                                                                                                                                       (recur ignite group_id r (conj lst-rs "false") ps my-stm-type)
+                                                                                                                                       (recur ignite group_id r (conj lst-rs "true") ps (add-stm-type my-stm-type "schema") sql)
+                                                                                                                                       (recur ignite group_id r (conj lst-rs "false") ps my-stm-type sql)
                                                                                                                                        ))
                                                                                                                                (throw (Exception. "单用户组不能执行 create schema 语句")))
                   ; drop dataset
                   (and (string? (first f)) (my-lexical/is-eq? (first f) "DROP") (my-lexical/is-eq? (second f) "schema")) (if (true? (.isMultiUserGroup (.configuration ignite)))
                                                                                                                              (let [rs (my-drop-dataset/drop-data-set-lst ignite group_id (my-super-sql/cull-semicolon f))]
                                                                                                                                  (if (nil? rs)
-                                                                                                                                     (recur ignite group_id r (conj lst-rs "true") ps (add-stm-type my-stm-type "schema"))
-                                                                                                                                     (recur ignite group_id r (conj lst-rs "false") ps my-stm-type)))
+                                                                                                                                     (recur ignite group_id r (conj lst-rs "true") ps (add-stm-type my-stm-type "schema") sql)
+                                                                                                                                     (recur ignite group_id r (conj lst-rs "false") ps my-stm-type sql)))
                                                                                                                              (throw (Exception. "单用户组不能执行 drop schema 语句")))
                   ; create table
                   (and (string? (first f)) (my-lexical/is-eq? (first f) "create") (my-lexical/is-eq? (second f) "table")) (let [rs (my-create-table/my_create_table_lst ignite group_id (my-super-sql/cull-semicolon f))]
                                                                                                                                 (if (nil? rs)
-                                                                                                                                    (recur ignite group_id r (conj lst-rs "true") ps (add-stm-type my-stm-type "table"))
-                                                                                                                                    (recur ignite group_id r (conj lst-rs "false") ps my-stm-type)
+                                                                                                                                    (recur ignite group_id r (conj lst-rs "true") ps (add-stm-type my-stm-type "table") sql)
+                                                                                                                                    (recur ignite group_id r (conj lst-rs "false") ps my-stm-type sql)
                                                                                                                                     ))
                   ; alter table
                   (and (string? (first f)) (my-lexical/is-eq? (first f) "ALTER") (my-lexical/is-eq? (second f) "table")) (let [rs (my-alter-table/alter_table ignite group_id (str/join " " (my-super-sql/cull-semicolon f)))]
                                                                                                                                (if (nil? rs)
-                                                                                                                                   (recur ignite group_id r (conj lst-rs "true") ps (add-stm-type my-stm-type "table"))
-                                                                                                                                   (recur ignite group_id r (conj lst-rs "false") ps my-stm-type)
+                                                                                                                                   (recur ignite group_id r (conj lst-rs "true") ps (add-stm-type my-stm-type "table") sql)
+                                                                                                                                   (recur ignite group_id r (conj lst-rs "false") ps my-stm-type sql)
                                                                                                                                    ))
                   ; drop table
                   (and (string? (first f)) (my-lexical/is-eq? (first f) "DROP") (my-lexical/is-eq? (second f) "table")) (let [rs (my-drop-table/drop_table ignite group_id (str/join " " (my-super-sql/cull-semicolon f)))]
                                                                                                                               (if (nil? rs)
-                                                                                                                                  (recur ignite group_id r (conj lst-rs "true") ps (add-stm-type my-stm-type "table"))
-                                                                                                                                  (recur ignite group_id r (conj lst-rs "false") ps my-stm-type)
+                                                                                                                                  (recur ignite group_id r (conj lst-rs "true") ps (add-stm-type my-stm-type "table") sql)
+                                                                                                                                  (recur ignite group_id r (conj lst-rs "false") ps my-stm-type sql)
                                                                                                                                   ))
                   ; create index
                   (and (string? (first f)) (my-lexical/is-eq? (first f) "create") (my-lexical/is-eq? (second f) "INDEX")) (let [rs (my-create-index/create_index ignite group_id (str/join " " (my-super-sql/cull-semicolon f)))]
                                                                                                                                 (if (nil? rs)
-                                                                                                                                    (recur ignite group_id r (conj lst-rs "true") ps my-stm-type)
-                                                                                                                                    (recur ignite group_id r (conj lst-rs "false") ps my-stm-type)
+                                                                                                                                    (recur ignite group_id r (conj lst-rs "true") ps my-stm-type sql)
+                                                                                                                                    (recur ignite group_id r (conj lst-rs "false") ps my-stm-type sql)
                                                                                                                                     ))
                   ; drop index
                   (and (string? (first f)) (my-lexical/is-eq? (first f) "DROP") (my-lexical/is-eq? (second f) "INDEX")) (let [rs (my-drop-index/drop_index ignite group_id (str/join " " (my-super-sql/cull-semicolon f)))]
                                                                                                                               (if (nil? rs)
-                                                                                                                                  (recur ignite group_id r (conj lst-rs "true") ps my-stm-type)
-                                                                                                                                  (recur ignite group_id r (conj lst-rs "false") ps my-stm-type)
+                                                                                                                                  (recur ignite group_id r (conj lst-rs "true") ps my-stm-type sql)
+                                                                                                                                  (recur ignite group_id r (conj lst-rs "false") ps my-stm-type sql)
                                                                                                                                   ))
                   ; no sql
                   ;(contains? #{"no_sql_create" "no_sql_insert" "no_sql_update" "no_sql_delete" "no_sql_query" "no_sql_drop" "push" "pop"} (str/lower-case (first f))) (.append sb (str (my-super-cache/my-no-lst ignite group_id lst (str/join " " lst)) ";"))
                   (and (string? (first f)) (contains? #{"noSqlInsert" "noSqlUpdate" "noSqlDelete" "noSqlDrop"} (str/lower-case (first f)))) (let [my-code (my-smart-clj/token-to-clj ignite group_id (my-select/sql-to-ast (my-super-sql/cull-semicolon f)) nil)]
-                                                                                                                                                (recur ignite group_id r (conj lst-rs (str (eval (read-string my-code)))) ps my-stm-type)
+                                                                                                                                                (recur ignite group_id r (conj lst-rs (str (eval (read-string my-code)))) ps my-stm-type sql)
                                                                                                                                                 )
                   (and (string? (first f)) (my-lexical/is-eq? (first f) "show_train_data")) (if-let [show-sql (my-super-sql/call-show-train-data ignite group_id (my-super-sql/cull-semicolon f))]
-                                                                                                (recur ignite group_id r (conj lst-rs (.getAll (.query (.cache ignite "public_meta") (SqlFieldsQuery. (format "select show_train_data(%s) as tip;" show-sql))))) ps my-stm-type))
+                                                                                                (recur ignite group_id r (conj lst-rs (.getAll (.query (.cache ignite "public_meta") (SqlFieldsQuery. (format "select show_train_data(%s) as tip;" show-sql))))) ps my-stm-type sql))
                   :else
                   (if (and (string? (first f)) (my-lexical/is-eq? (first f) "set") (my-lexical/is-eq? (second f) "STREAMING"))
                       (if (some? r)
@@ -139,21 +139,21 @@
                               ;(if (map? smart-sql-obj)
                               ;    (recur ignite group_id r (conj lst-rs (-> smart-sql-obj :sql)) ps)
                               ;    (recur ignite group_id r (conj lst-rs smart-sql-obj) ps))
-                              (cond (and (map? smart-sql-obj) (contains? smart-sql-obj :sql)) (recur ignite group_id r (conj lst-rs (-> smart-sql-obj :sql)) ps my-stm-type)
-                                    (my-lexical/is-map? smart-sql-obj) (recur ignite group_id r (conj lst-rs (MyGson/groupObjToLine smart-sql-obj)) ps my-stm-type)
-                                    (my-lexical/is-seq? smart-sql-obj) (recur ignite group_id r (conj lst-rs (MyGson/groupObjToLine smart-sql-obj)) ps my-stm-type)
+                              (cond (and (map? smart-sql-obj) (contains? smart-sql-obj :sql)) (recur ignite group_id r (conj lst-rs (-> smart-sql-obj :sql)) ps my-stm-type sql)
+                                    (my-lexical/is-map? smart-sql-obj) (recur ignite group_id r (conj lst-rs (MyGson/groupObjToLine smart-sql-obj)) ps my-stm-type sql)
+                                    (my-lexical/is-seq? smart-sql-obj) (recur ignite group_id r (conj lst-rs (MyGson/groupObjToLine smart-sql-obj)) ps my-stm-type sql)
                                     :else
-                                    (recur ignite group_id r (conj lst-rs smart-sql-obj) ps my-stm-type))
+                                    (recur ignite group_id r (conj lst-rs smart-sql-obj) ps my-stm-type sql))
                               )
                           (let [smart-sql-obj (my-super-sql/my-smart-sql ignite group_id (apply concat f))]
                               ;(if (map? smart-sql-obj)
                               ;    (recur ignite group_id r (conj lst-rs (-> smart-sql-obj :sql)) ps)
                               ;    (recur ignite group_id r (conj lst-rs smart-sql-obj) ps))
-                              (cond (and (map? smart-sql-obj) (contains? smart-sql-obj :sql)) (recur ignite group_id r (conj lst-rs (-> smart-sql-obj :sql)) ps my-stm-type)
-                                    (my-lexical/is-map? smart-sql-obj) (recur ignite group_id r (conj lst-rs (MyGson/groupObjToLine smart-sql-obj)) ps my-stm-type)
-                                    (my-lexical/is-seq? smart-sql-obj) (recur ignite group_id r (conj lst-rs (MyGson/groupObjToLine smart-sql-obj)) ps my-stm-type)
+                              (cond (and (map? smart-sql-obj) (contains? smart-sql-obj :sql)) (recur ignite group_id r (conj lst-rs (-> smart-sql-obj :sql)) ps my-stm-type sql)
+                                    (my-lexical/is-map? smart-sql-obj) (recur ignite group_id r (conj lst-rs (MyGson/groupObjToLine smart-sql-obj)) ps my-stm-type sql)
+                                    (my-lexical/is-seq? smart-sql-obj) (recur ignite group_id r (conj lst-rs (MyGson/groupObjToLine smart-sql-obj)) ps my-stm-type sql)
                                     :else
-                                    (recur ignite group_id r (conj lst-rs smart-sql-obj) ps my-stm-type)))
+                                    (recur ignite group_id r (conj lst-rs smart-sql-obj) ps my-stm-type sql)))
                           ))
                   ;(throw (Exception. "输入字符有错误！不能解析，请确认输入正确！"))
                   ))
@@ -174,8 +174,8 @@
 (defn execute-sql-query [^String userToken ^String sql ^String ps]
     (if-let [lst (my-smart-sql/re-super-smart-segment (my-smart-sql/get-my-smart-segment sql))]
         (if (my-lexical/is-str-empty? userToken)
-            (execute-sql-query-lst (Ignition/ignite) (my-user-group/get_user_group (Ignition/ignite) (.getRoot_token (.configuration (Ignition/ignite)))) lst [] ps nil)
-            (execute-sql-query-lst (Ignition/ignite) (my-user-group/get_user_group (Ignition/ignite) userToken) lst [] ps nil))))
+            (execute-sql-query-lst (Ignition/ignite) (my-user-group/get_user_group (Ignition/ignite) (.getRoot_token (.configuration (Ignition/ignite)))) lst [] ps nil sql)
+            (execute-sql-query-lst (Ignition/ignite) (my-user-group/get_user_group (Ignition/ignite) userToken) lst [] ps nil sql))))
 
 (defn my-executeSqlQuery [^String userToken ^String sql ^String ps]
     (cond (and (my-lexical/is-str-empty? userToken) (my-lexical/is-eq? "my_meta" ps)) (cond (re-find #"^(?i)SELECT\s+m.id\s+FROM\s+MY_META.MY_USERS_GROUP\s+m\s+WHERE\s+m.GROUP_NAME\s+=\s+'\w+'$" sql) (let [m (execute-sql-query "" sql nil)]
