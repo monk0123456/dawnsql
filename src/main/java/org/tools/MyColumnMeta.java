@@ -48,6 +48,7 @@ public class MyColumnMeta {
                 catch (Exception e)
                 {
                     e.printStackTrace();
+                    map.put(key, null);
                 }
             }
             rs.add(map);
