@@ -320,7 +320,11 @@
     (loop [[f & r] ast lst []]
         (if (some? f)
             (if (contains? f :sql_obj)
-                (recur r (conj lst (assoc f :sql_obj (assoc (-> f :sql_obj) :query-items [{:func-name "count", :lst_ps [{:operation_symbol "*"}]}]))))
+                (recur r (conj lst (assoc f :sql_obj (assoc (-> f :sql_obj) :query-items [{:func-name "count", :lst_ps [{:table_alias "",
+                                                                                                                         :item_name "1",
+                                                                                                                         :item_type "",
+                                                                                                                         :java_item_type java.lang.Integer,
+                                                                                                                         :const true}]}]))))
                 (recur r (conj lst f)))
             lst)))
 
@@ -348,8 +352,12 @@
         (if (false? (rpc-ast-has-limit? ast))
             (let [ast-limit (rpc-ast-limit ast (get limit-size "start") (get limit-size "limit")) ast-count (rpc-ast-count ast)]
                 (let [sql-limit (-> (my-select-plus-args/my-ast-to-sql ignite group_id nil ast-limit) :sql) sql-count (-> (my-select-plus-args/my-ast-to-sql ignite group_id nil ast-count) :sql) sql (lst-to-sql lst)]
-                    (let [totalProperty (first (first (.getAll (.query (.cache ignite "public_meta") (SqlFieldsQuery. sql-count))))) root (.getAll (.query (.cache ignite "public_meta") (SqlFieldsQuery. sql-limit))) ht (MyColumnMeta/getColumnMeta sql)]
-                        (doto (Hashtable.) (.put "totalProperty" totalProperty) (.put "root" (MyColumnMeta/getColumnRow ht root))))))
+                    (if-let [all (.getAll (.query (.cache ignite "public_meta") (SqlFieldsQuery. sql-count)))]
+                        (if (= (count all) 1)
+                            (let [totalProperty (first (first all)) root (.getAll (.query (.cache ignite "public_meta") (SqlFieldsQuery. sql-limit))) ht (MyColumnMeta/getColumnMeta sql)]
+                                (doto (Hashtable.) (.put "totalProperty" totalProperty) (.put "root" (MyColumnMeta/getColumnRow ht root))))
+                            (let [totalProperty (count all) root (.getAll (.query (.cache ignite "public_meta") (SqlFieldsQuery. sql-limit))) ht (MyColumnMeta/getColumnMeta sql)]
+                                (doto (Hashtable.) (.put "totalProperty" totalProperty) (.put "root" (MyColumnMeta/getColumnRow ht root))))))))
             (let [sql (lst-to-sql lst)]
                 (let [root (.getAll (.query (.cache ignite "public_meta") (SqlFieldsQuery. sql))) ht (MyColumnMeta/getColumnMeta sql)]
                     (doto (Hashtable.) (.put "totalProperty" (.size root)) (.put "root" (MyColumnMeta/getColumnRow ht root))))))
