@@ -320,7 +320,7 @@
     (loop [[f & r] ast lst []]
         (if (some? f)
             (if (contains? f :sql_obj)
-                (recur r (conj lst (assoc f :sql_obj (assoc (-> f :sql_obj) :query-items [{:func-name "count", :lst_ps [{:table_alias "",
+                (recur r (conj lst (assoc f :sql_obj (assoc (-> f :sql_obj) :order-by nil :query-items [{:func-name "count", :lst_ps [{:table_alias "",
                                                                                                                          :item_name "1",
                                                                                                                          :item_type "",
                                                                                                                          :java_item_type java.lang.Integer,
@@ -351,46 +351,52 @@
     (let [ast (my-select-plus/sql-to-ast lst) limit-size (MyGson/getHashtable ps)]
         (if (false? (rpc-ast-has-limit? ast))
             (let [ast-limit (rpc-ast-limit ast (get limit-size "start") (get limit-size "limit")) ast-count (rpc-ast-count ast)]
-                (let [sql-limit (-> (my-select-plus-args/my-ast-to-sql ignite group_id nil ast-limit) :sql) sql-count (-> (my-select-plus-args/my-ast-to-sql ignite group_id nil ast-count) :sql) sql (lst-to-sql lst)]
+                (let [sql-limit (-> (my-select-plus-args/my-ast-to-sql ignite group_id nil ast-limit) :sql) sql-count (-> (my-select-plus-args/my-ast-to-sql ignite group_id nil ast-count) :sql)]
+                    (println sql-limit)
+                    (println sql-count)
                     (if-let [all (.getAll (.query (.cache ignite "public_meta") (SqlFieldsQuery. sql-count)))]
                         (if (= (count all) 1)
-                            (let [totalProperty (first (first all)) root (.getAll (.query (.cache ignite "public_meta") (SqlFieldsQuery. sql-limit))) ht (MyColumnMeta/getColumnMeta sql)]
+                            (let [totalProperty (first (first all)) root (.getAll (.query (.cache ignite "public_meta") (SqlFieldsQuery. sql-limit))) ht (MyColumnMeta/getColumnMeta (lst-to-sql lst))]
                                 (doto (Hashtable.) (.put "totalProperty" totalProperty) (.put "root" (MyColumnMeta/getColumnRow ht root))))
-                            (let [totalProperty (count all) root (.getAll (.query (.cache ignite "public_meta") (SqlFieldsQuery. sql-limit))) ht (MyColumnMeta/getColumnMeta sql)]
+                            (let [totalProperty (count all) root (.getAll (.query (.cache ignite "public_meta") (SqlFieldsQuery. sql-limit))) ht (MyColumnMeta/getColumnMeta (lst-to-sql lst))]
                                 (doto (Hashtable.) (.put "totalProperty" totalProperty) (.put "root" (MyColumnMeta/getColumnRow ht root))))))))
-            (let [sql (lst-to-sql lst)]
-                (let [root (.getAll (.query (.cache ignite "public_meta") (SqlFieldsQuery. sql))) ht (MyColumnMeta/getColumnMeta sql)]
+            (let [sql (-> (my-select-plus-args/my-ast-to-sql ignite group_id nil (my-select-plus/sql-to-ast lst)) :sql)]
+                (let [root (.getAll (.query (.cache ignite "public_meta") (SqlFieldsQuery. sql))) ht (MyColumnMeta/getColumnMeta (lst-to-sql lst))]
                     (doto (Hashtable.) (.put "totalProperty" (.size root)) (.put "root" (MyColumnMeta/getColumnRow ht root))))))
         ))
 
 (defn rpc_select-authority [ignite group_id lst ps]
-    (if (my-lexical/null-or-empty? ps)
-        (.getAll (.query (.cache ignite "public_meta") (SqlFieldsQuery. (-> (my-select-plus-args/my-ast-to-sql ignite group_id nil (my-select-plus/sql-to-ast lst)) :sql))))
-        (cond (my-lexical/is-eq? ps "meta") (MyColumnMeta/getColumnMeta (lst-to-sql lst))
-              (my-lexical/is-eq? ps "count") (MyColumnMeta/getColumnCount ignite (-> (my-select-plus-args/my-ast-to-sql ignite group_id nil (my-select-plus/sql-to-ast lst)) :sql))
-              (my-lexical/is-eq? ps "schema") (let [lst-small (map str/lower-case lst)]
-                                                  (cond (= '("select" "schema_name" "from" "sys" "." "schemas") lst-small) (.getAll (.query (.cache ignite "public_meta") (SqlFieldsQuery. "SELECT SCHEMA_NAME FROM sys.SCHEMAS")))
-                                                        (= '("select" "table_name" "from" "sys" "." "tables" "where" "schema_name" "=") (drop-last lst-small)) (.getAll (.query (.cache ignite "public_meta") (SqlFieldsQuery. (format "SELECT TABLE_NAME FROM sys.TABLES WHERE SCHEMA_NAME = %s" (last lst)))))
-                                                        (= '("select" "m" "." "id" "from" "my_meta" "." "my_users_group" "m" "where" "m" "." "group_name" "=") (drop-last lst-small)) (if (my-lexical/is-eq? (format "'%s'" (.getRoot_token (.configuration ignite))) (last lst))
-                                                                                                                                                                                          (ArrayList.)
-                                                                                                                                                                                          (.getAll (.query (.cache ignite "public_meta") (SqlFieldsQuery. (format "SELECT m.id FROM MY_META.MY_USERS_GROUP m WHERE m.GROUP_NAME = %s" (last lst))))))
-                                                        (= '("select" "m" "." "id" "from" "my_meta" "." "my_users_group" "m" "where" "m" "." "user_token" "=") (drop-last lst-small)) (if (my-lexical/is-eq? (format "'%s'" (.getRoot_token (.configuration ignite))) (last lst))
-                                                                                                                                                                                          (doto (ArrayList.) (.add (doto (ArrayList.) (.add 0))))
-                                                                                                                                                                                          (.getAll (.query (.cache ignite "public_meta") (SqlFieldsQuery. (format "SELECT m.id FROM MY_META.MY_USERS_GROUP m WHERE m.USER_TOKEN = %s" (last lst))))))
-                                                        ))
-              ;(my-lexical/is-eq? ps "row") (MyColumnMeta/getColumnRow ignite sql)
-              :else
-              (let [ht (MyGson/getHashtable ps)]
-                  (cond (.containsKey ht "row") (MyColumnMeta/getColumnRow ignite (-> (my-select-plus-args/my-ast-to-sql ignite group_id nil (my-select-plus/sql-to-ast lst)) :sql) ht)
-                        (.containsKey ht "select") (re-rpc-select ignite group_id lst ps)
-                        ))
-              )))
+    (do
+        (println lst)
+        (println ps)
+        (println "************")
+        (if (my-lexical/null-or-empty? ps)
+            (.getAll (.query (.cache ignite "public_meta") (SqlFieldsQuery. (-> (my-select-plus-args/my-ast-to-sql ignite group_id nil (my-select-plus/sql-to-ast lst)) :sql))))
+            (cond (my-lexical/is-eq? ps "meta") (MyColumnMeta/getColumnMeta (lst-to-sql lst))
+                  (my-lexical/is-eq? ps "count") (MyColumnMeta/getColumnCount ignite (-> (my-select-plus-args/my-ast-to-sql ignite group_id nil (my-select-plus/sql-to-ast lst)) :sql))
+                  (my-lexical/is-eq? ps "schema") (let [lst-small (map str/lower-case lst)]
+                                                      (cond (= '("select" "schema_name" "from" "sys" "." "schemas") lst-small) (.getAll (.query (.cache ignite "public_meta") (SqlFieldsQuery. "SELECT SCHEMA_NAME FROM sys.SCHEMAS")))
+                                                            (= '("select" "table_name" "from" "sys" "." "tables" "where" "schema_name" "=") (drop-last lst-small)) (.getAll (.query (.cache ignite "public_meta") (SqlFieldsQuery. (format "SELECT TABLE_NAME FROM sys.TABLES WHERE SCHEMA_NAME = %s" (last lst)))))
+                                                            (= '("select" "m" "." "id" "from" "my_meta" "." "my_users_group" "m" "where" "m" "." "group_name" "=") (drop-last lst-small)) (if (my-lexical/is-eq? (format "'%s'" (.getRoot_token (.configuration ignite))) (last lst))
+                                                                                                                                                                                              (ArrayList.)
+                                                                                                                                                                                              (.getAll (.query (.cache ignite "public_meta") (SqlFieldsQuery. (format "SELECT m.id FROM MY_META.MY_USERS_GROUP m WHERE m.GROUP_NAME = %s" (last lst))))))
+                                                            (= '("select" "m" "." "id" "from" "my_meta" "." "my_users_group" "m" "where" "m" "." "user_token" "=") (drop-last lst-small)) (if (my-lexical/is-eq? (format "'%s'" (.getRoot_token (.configuration ignite))) (last lst))
+                                                                                                                                                                                              (doto (ArrayList.) (.add (doto (ArrayList.) (.add 0))))
+                                                                                                                                                                                              (.getAll (.query (.cache ignite "public_meta") (SqlFieldsQuery. (format "SELECT m.id FROM MY_META.MY_USERS_GROUP m WHERE m.USER_TOKEN = %s" (last lst))))))
+                                                            ))
+                  ;(my-lexical/is-eq? ps "row") (MyColumnMeta/getColumnRow ignite sql)
+                  :else
+                  (let [ht (MyGson/getHashtable ps)]
+                      (cond (.containsKey ht "row") (MyColumnMeta/getColumnRow ignite (-> (my-select-plus-args/my-ast-to-sql ignite group_id nil (my-select-plus/sql-to-ast lst)) :sql) ht)
+                            (.containsKey ht "select") (re-rpc-select ignite group_id lst ps)
+                            ))
+                  ))))
 
 (defn re-rpc-select-no-authority [ignite group_id lst ps]
     (let [ast (my-select-plus/sql-to-ast lst) limit-size (MyGson/getHashtable ps)]
         (let [ast-limit (rpc-ast-limit ast (get limit-size "start") (get limit-size "limit")) ast-count (rpc-ast-count ast)]
-            (let [sql-limit (-> (my-select-plus-args/my-ast-to-sql-no-authority ignite group_id nil ast-limit) :sql) sql-count (-> (my-select-plus-args/my-ast-to-sql-no-authority ignite group_id nil ast-count) :sql) sql (lst-to-sql lst)]
-                (let [totalProperty (first (first (.getAll (.query (.cache ignite "public_meta") (SqlFieldsQuery. sql-count))))) root (.getAll (.query (.cache ignite "public_meta") (SqlFieldsQuery. sql-limit))) ht (MyColumnMeta/getColumnMeta sql)]
+            (let [sql-limit (-> (my-select-plus-args/my-ast-to-sql-no-authority ignite group_id nil ast-limit) :sql) sql-count (-> (my-select-plus-args/my-ast-to-sql-no-authority ignite group_id nil ast-count) :sql) sql (-> (my-select-plus-args/my-ast-to-sql ignite group_id nil (my-select-plus/sql-to-ast lst)) :sql)]
+                (let [totalProperty (first (first (.getAll (.query (.cache ignite "public_meta") (SqlFieldsQuery. sql-count))))) root (.getAll (.query (.cache ignite "public_meta") (SqlFieldsQuery. sql-limit))) ht (MyColumnMeta/getColumnMeta (lst-to-sql lst))]
                     (doto (Hashtable.) (.put "totalProperty" totalProperty) (.put "root" (MyColumnMeta/getColumnRow ht root))))))))
 
 (defn rpc_select-no-authority [ignite group_id lst ps]
