@@ -51,8 +51,7 @@ public class MyCacheExUtil implements Serializable {
 //        transMyCache(ignite, lstCache);
 //    }
 
-    public static void transLogCache(final Ignite ignite, final List lstLogCache)
-    {
+    public static void transLogCache(final Ignite ignite, final List lstLogCache) throws Exception {
         List<MyCacheEx> lstCache = (List<MyCacheEx>) lstLogCache.stream().map(m -> convertToCacheEx(ignite, m)).collect(Collectors.toList());
 //        if (ignite.configuration().isMyLogEnabled() && myLog != null) {
 //            long log_id = ignite.atomicSequence("my_log", 0, true).incrementAndGet();
@@ -64,29 +63,25 @@ public class MyCacheExUtil implements Serializable {
         }
     }
 
-    public static void transCache(final Ignite ignite, final List<MyLogCache> lstLogCache)
-    {
+    public static void transCache(final Ignite ignite, final List<MyLogCache> lstLogCache) throws Exception {
         List<MyCacheEx> lstCache = lstLogCache.stream().map(m -> convertToCacheEx(ignite, m)).collect(Collectors.toList());
 
         transMyCache(ignite, lstCache);
     }
 
-    public static void transCache(final Ignite ignite, final PersistentVector lstLogCache)
-    {
+    public static void transCache(final Ignite ignite, final PersistentVector lstLogCache) throws Exception {
         transMyCache(ignite, (List<MyCacheEx>) lstLogCache.stream().map(m -> convertToCacheEx(ignite, (MyLogCache)m)).collect(Collectors.toList()));
     }
 
-    public static void transCache(final Ignite ignite, final PersistentList lstLogCache)
-    {
+    public static void transCache(final Ignite ignite, final PersistentList lstLogCache) throws Exception {
         transMyCache(ignite, (List<MyCacheEx>) lstLogCache.stream().map(m -> convertToCacheEx(ignite, (MyLogCache)m)).collect(Collectors.toList()));
     }
 
-    public static void transCache(final Ignite ignite, final LazySeq lstLogCache)
-    {
+    public static void transCache(final Ignite ignite, final LazySeq lstLogCache) throws Exception {
         transMyCache(ignite, (List<MyCacheEx>) lstLogCache.stream().map(m -> convertToCacheEx(ignite, (MyLogCache)m)).collect(Collectors.toList()));
     }
 
-    private static void transMyCache(final Ignite ignite, final List<MyCacheEx> lstCache) {
+    private static void transMyCache(final Ignite ignite, final List<MyCacheEx> lstCache) throws Exception {
         //List<MyCacheEx> lstCache = lstLogCache.stream().map(m -> convertToCacheEx(ignite, m)).collect(Collectors.toList());
         if (myLog != null)
         {
@@ -99,19 +94,29 @@ public class MyCacheExUtil implements Serializable {
 
                 for (MyCacheEx m : lstCache)
                 {
-                    switch (m.getSqlType()) {
-                        case UPDATE:
-                            m.getCache().replace(m.getKey(), m.getValue());
-                            myLog.saveTo(transSession, MyCacheExUtil.objToBytes(m.getData()));
-                            break;
-                        case INSERT:
-                            m.getCache().put(m.getKey(), m.getValue());
-                            myLog.saveTo(transSession, MyCacheExUtil.objToBytes(m.getData()));
-                            break;
-                        case DELETE:
-                            m.getCache().remove(m.getKey());
-                            myLog.saveTo(transSession, MyCacheExUtil.objToBytes(m.getData()));
-                            break;
+                    if (m == null)
+                    {
+                        throw new Exception("该 cache 不存在！");
+                    }
+                    else if (m.getCache() == null)
+                    {
+                        throw new Exception("该 cache 不存在！");
+                    }
+                    else {
+                        switch (m.getSqlType()) {
+                            case UPDATE:
+                                m.getCache().replace(m.getKey(), m.getValue());
+                                myLog.saveTo(transSession, MyCacheExUtil.objToBytes(m.getData()));
+                                break;
+                            case INSERT:
+                                m.getCache().put(m.getKey(), m.getValue());
+                                myLog.saveTo(transSession, MyCacheExUtil.objToBytes(m.getData()));
+                                break;
+                            case DELETE:
+                                m.getCache().remove(m.getKey());
+                                myLog.saveTo(transSession, MyCacheExUtil.objToBytes(m.getData()));
+                                break;
+                        }
                     }
                 }
 
@@ -138,16 +143,26 @@ public class MyCacheExUtil implements Serializable {
 
                 for (MyCacheEx m : lstCache)
                 {
-                    switch (m.getSqlType()) {
-                        case UPDATE:
-                            m.getCache().replace(m.getKey(), m.getValue());
-                            break;
-                        case INSERT:
-                            m.getCache().put(m.getKey(), m.getValue());
-                            break;
-                        case DELETE:
-                            m.getCache().remove(m.getKey());
-                            break;
+                    if (m == null)
+                    {
+                        throw new Exception("该 cache 不存在！");
+                    }
+                    else if (m.getCache() == null)
+                    {
+                        throw new Exception("该 cache 不存在！");
+                    }
+                    else {
+                        switch (m.getSqlType()) {
+                            case UPDATE:
+                                m.getCache().replace(m.getKey(), m.getValue());
+                                break;
+                            case INSERT:
+                                m.getCache().put(m.getKey(), m.getValue());
+                                break;
+                            case DELETE:
+                                m.getCache().remove(m.getKey());
+                                break;
+                        }
                     }
                 }
 

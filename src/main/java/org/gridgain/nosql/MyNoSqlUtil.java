@@ -303,8 +303,7 @@ public class MyNoSqlUtil {
         }
     }
 
-    public static void runCache(final Ignite ignite, final MyNoSqlCache myNoSqlCache)
-    {
+    public static void runCache(final Ignite ignite, final MyNoSqlCache myNoSqlCache) throws Exception {
         List<MyNoSqlCache> lst = new ArrayList<>();
         lst.add(myNoSqlCache);
         MyCacheExUtil.transLogCache(ignite, lst);

@@ -226,9 +226,25 @@
                                                                                                                                        ))
                    ; no sql
                    ;(contains? #{"no_sql_create" "no_sql_insert" "no_sql_update" "no_sql_delete" "no_sql_query" "no_sql_drop" "push" "pop"} (str/lower-case (first lst))) (.append sb (str (my-super-cache/my-no-lst ignite group_id lst (str/join " " lst)) ";"))
-                   (and (string? (first lst)) (contains? #{"noSqlInsert" "noSqlUpdate" "noSqlDelete" "noSqlDrop"} (str/lower-case (first lst)))) (let [my-code (my-smart-clj/token-to-clj ignite group_id (my-select/sql-to-ast (cull-semicolon lst)) nil)]
-                                                                                                                                                     (recur ignite group_id r (conj lst-rs (format "select show_msg('%s') as tip;" (str (eval (read-string my-code))))))
-                                                                                                                                                     )
+                   ;(and (string? (first lst)) (contains? #{"noSqlInsert" "noSqlUpdate" "noSqlDelete" "noSqlDrop"} (str/lower-case (first lst)))) (let [my-code (my-smart-clj/token-to-clj ignite group_id (my-select/sql-to-ast (cull-semicolon lst)) nil)]
+                   ;                                                                                                                                  (recur ignite group_id r (conj lst-rs (format "select show_msg('%s') as tip;" (str (eval (read-string my-code)))))))
+
+                   ; no sql
+                   (and (string? (first lst)) (contains? #{"nosqlcreate" "nosqlinsert" "nosqlupdate" "nosqldelete" "nosqldrop"} (str/lower-case (first lst)))) (if-let [smart-sql-obj (my-smart-sql ignite group_id lst)]
+                                                                                                                                                                   (cond (and (map? smart-sql-obj) (contains? smart-sql-obj :sql)) (recur ignite group_id r (conj lst-rs (format "select %s;" (-> smart-sql-obj :sql))))
+                                                                                                                                                                         (my-lexical/is-map? smart-sql-obj) (recur ignite group_id r (conj lst-rs (format "select show_msg('%s') as tip;" (MyGson/groupObjToLine smart-sql-obj))))
+                                                                                                                                                                         (my-lexical/is-seq? smart-sql-obj) (recur ignite group_id r (conj lst-rs (format "select show_msg('%s') as tip;" (MyGson/groupObjToLine smart-sql-obj))))
+                                                                                                                                                                         :else
+                                                                                                                                                                         (recur ignite group_id r (conj lst-rs (format "select show_msg('%s') as tip;" smart-sql-obj))))
+                                                                                                                                                                   (recur ignite group_id r (conj lst-rs (format "select show_msg('执行成功！') as tip;"))))
+                   ; no sql
+                   (and (string? (first lst)) (= "nosqlget" (str/lower-case (first lst)))) (if-let [smart-sql-obj (my-smart-sql ignite group_id lst)]
+                                                                                               (cond (and (map? smart-sql-obj) (contains? smart-sql-obj :sql)) (recur ignite group_id r (conj lst-rs (format "select %s;" (-> smart-sql-obj :sql))))
+                                                                                                     (my-lexical/is-map? smart-sql-obj) (recur ignite group_id r (conj lst-rs (format "select show_msg('%s') as tip;" (MyGson/groupObjToLine smart-sql-obj))))
+                                                                                                     (my-lexical/is-seq? smart-sql-obj) (recur ignite group_id r (conj lst-rs (format "select show_msg('%s') as tip;" (MyGson/groupObjToLine smart-sql-obj))))
+                                                                                                     :else
+                                                                                                     (recur ignite group_id r (conj lst-rs (format "select show_msg('%s') as tip;" smart-sql-obj))))
+                                                                                               (recur ignite group_id r lst-rs))
                    (and (string? (first lst)) (my-lexical/is-eq? (first lst) "show_train_data")) (if-let [show-sql (call-show-train-data ignite group_id (cull-semicolon lst))]
                                                                                                      (recur ignite group_id r (conj lst-rs (format "select show_train_data(%s) as tip;" show-sql))))
                    :else
