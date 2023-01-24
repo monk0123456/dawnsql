@@ -181,8 +181,7 @@ public class MyNoSqlUtil {
         }
     }
 
-    public static void createCacheSave(final Ignite ignite, final String schema_name, final String table_name, final Boolean is_cache, final String mode, final int maxSize, final int backups)
-    {
+    public static void createCacheSave(final Ignite ignite, final String schema_name, final String table_name, final Boolean is_cache, final String mode, final int maxSize, final int backups) throws Exception {
         String cacheName = "c_" + schema_name.toLowerCase() + "_" + table_name.toLowerCase();
         CacheConfiguration configuration;
         if (is_cache == true)
@@ -197,54 +196,66 @@ public class MyNoSqlUtil {
         if (myLog != null)
         {
             configuration.setSqlSchema(schema_name);
-            ignite.getOrCreateCache(configuration);
+            IgniteCache<MyCachePK, MyCaches> my_caches = ignite.cache("my_caches");
+            MyCachePK key = new MyCachePK(schema_name, table_name);
+            if (!my_caches.containsKey(key)) {
+                ignite.getOrCreateCache(configuration);
 
-            IgniteTransactions transactions = ignite.transactions();
-            Transaction tx = null;
-            String transSession = UUID.randomUUID().toString();
-            try {
-                tx = transactions.txStart();
-                myLog.createSession(transSession);
+                IgniteTransactions transactions = ignite.transactions();
+                Transaction tx = null;
+                String transSession = UUID.randomUUID().toString();
+                try {
+                    tx = transactions.txStart();
+                    myLog.createSession(transSession);
 
-                MySmartCache mySmartCache = new MySmartCache();
-                mySmartCache.setCacheDllType(CacheDllType.CREATE);
-                mySmartCache.setIs_cache(is_cache);
-                mySmartCache.setMode(mode);
-                if (maxSize > 0) {
-                    mySmartCache.setMaxSize(maxSize);
+                    MySmartCache mySmartCache = new MySmartCache();
+                    mySmartCache.setCacheDllType(CacheDllType.CREATE);
+                    mySmartCache.setIs_cache(is_cache);
+                    mySmartCache.setMode(mode);
+                    if (maxSize > 0) {
+                        mySmartCache.setMaxSize(maxSize);
+                    }
+
+                    if (backups > 0) {
+                        mySmartCache.setBackups(backups);
+                    }
+                    mySmartCache.setTable_name(cacheName);
+
+                    myLog.saveTo(transSession, MyCacheExUtil.objToBytes(mySmartCache));
+
+                    my_caches.put(key, new MyCaches(schema_name, table_name, is_cache, mode, maxSize, backups));
+
+                    myLog.commit(transSession);
+                    tx.commit();
+                } catch (Exception ex) {
+                    if (tx != null) {
+                        myLog.rollback(transSession);
+                        tx.rollback();
+                        ignite.destroyCache(cacheName);
+                    }
+                } finally {
+                    if (tx != null) {
+                        tx.close();
+                    }
                 }
-
-                if (backups > 0)
-                {
-                    mySmartCache.setBackups(backups);
-                }
-                mySmartCache.setTable_name(cacheName);
-
-                myLog.saveTo(transSession, MyCacheExUtil.objToBytes(mySmartCache));
-
-                IgniteCache<MyCachePK, MyCaches> my_caches = ignite.cache("my_caches");
-                my_caches.put(new MyCachePK(schema_name, table_name), new MyCaches(schema_name, table_name, is_cache, mode, maxSize, backups));
-
-                myLog.commit(transSession);
-                tx.commit();
-            } catch (Exception ex) {
-                if (tx != null) {
-                    myLog.rollback(transSession);
-                    tx.rollback();
-                    ignite.destroyCache(cacheName);
-                }
-            } finally {
-                if (tx != null) {
-                    tx.close();
-                }
+            }
+            else
+            {
+                throw new Exception(table_name + "已经存在，不能新建！");
             }
         }
         else
         {
-            ignite.getOrCreateCache(configuration);
-
             IgniteCache<MyCachePK, MyCaches> my_caches = ignite.cache("my_caches");
-            my_caches.put(new MyCachePK(schema_name, table_name), new MyCaches(schema_name, table_name, is_cache, mode, maxSize, backups));
+            MyCachePK key = new MyCachePK(schema_name, table_name);
+            if (!my_caches.containsKey(key)) {
+                ignite.getOrCreateCache(configuration);
+                my_caches.put(key, new MyCaches(schema_name, table_name, is_cache, mode, maxSize, backups));
+            }
+            else
+            {
+                throw new Exception(table_name + "已经存在，不能新建！");
+            }
         }
     }
 
