@@ -146,11 +146,13 @@
          (recur r (conj lst (to_item_obj f)))
          lst)))
 
-(defn get_json [lst]
+(defn get_json [group_id lst]
     (if-let [{schema_name :schema_name table_name :table_name rs_lst :rs_lst} (get_table_name lst)]
         (if-let [{items_line :items_line where_line :where_line} (get_items rs_lst)]
             (if-let [items (get_item_lst items_line)]
-                {:schema_name schema_name :table_name table_name :items (item_jsons items) :where_line where_line}
+                (if (my-lexical/is-str-empty? schema_name)
+                    {:schema_name (second group_id) :table_name table_name :items (item_jsons items) :where_line where_line}
+                    {:schema_name schema_name :table_name table_name :items (item_jsons items) :where_line where_line})
                 ;(assoc (my-lexical/get-schema (str/lower-case table_name)) :items (item_jsons items) :where_line where_line)
                 )
             (throw (Exception. "更新数据的语句错误！")))
@@ -189,7 +191,7 @@
           ))
 
 (defn my-authority [^Ignite ignite group_id lst-sql args-dic]
-    (when-let [{schema_name :schema_name table_name :table_name items :items where_line :where_line} (get_json lst-sql)]
+    (when-let [{schema_name :schema_name table_name :table_name items :items where_line :where_line} (get_json group_id lst-sql)]
         (let [{pk :pk data :data} (.get (.cache ignite "table_ast") (MySchemaTable. schema_name table_name))]
             (let [[where-lst args] (my-where-line where_line args-dic)]
                 (cond (and (my-lexical/is-eq? schema_name "my_meta") (= (first group_id) 0)) (if (contains? plus-init-sql/my-grid-tables-set (str/lower-case table_name))
@@ -229,7 +231,7 @@
         ))
 
 (defn my-no-authority [^Ignite ignite group_id lst-sql args-dic]
-    (when-let [{schema_name :schema_name table_name :table_name items :items where_line :where_line} (get_json lst-sql)]
+    (when-let [{schema_name :schema_name table_name :table_name items :items where_line :where_line} (get_json group_id lst-sql)]
         (let [{pk :pk data :data} (.get (.cache ignite "table_ast") (MySchemaTable. schema_name table_name))]
             (let [[where-lst args] (my-where-line where_line args-dic) lst-ast (where-pk pk where_line)]
                 {:schema_name schema_name :table_name table_name :items items :where_line where-lst :args args :lst-ast lst-ast :pk pk :data data}))
