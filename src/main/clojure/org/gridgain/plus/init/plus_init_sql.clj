@@ -291,17 +291,19 @@
                     java_method_name VARCHAR(30),
                     cls_name VARCHAR,
                     return_type VARCHAR(20),
+                    ps_code VARCHAR,
                     descrip VARCHAR,
                     PRIMARY KEY (method_name)
                     ) WITH \"template=MyMeta_template,VALUE_TYPE=cn.plus.model.ddl.MyFunc,cache_name=my_func,ATOMICITY=TRANSACTIONAL,cache_group=my_meta\";
 
+    /**
     CREATE TABLE IF NOT EXISTS my_meta.my_func_ps (
                     method_name VARCHAR(30),
                     ps_index INTEGER,
                     ps_type VARCHAR(20),
                     PRIMARY KEY (method_name, ps_index)
                     ) WITH \"template=MyMeta_template,affinityKey=method_name,VALUE_TYPE=cn.plus.model.ddl.MyFuncPs,cache_name=my_func_ps,ATOMICITY=TRANSACTIONAL,cache_group=my_meta\";
-
+    */
 ")
 
 (def my-un-grid-tables

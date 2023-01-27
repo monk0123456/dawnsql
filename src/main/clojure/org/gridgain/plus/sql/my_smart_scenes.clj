@@ -42,11 +42,13 @@
 ; 调用 func
 (defn my-invoke-func [^Ignite ignite ^String method-name ps]
     (if-let [m (MyPlusUtil/invokeFuncObj ignite (str/lower-case method-name) (to-array ps))]
-        (doto (ArrayList.) (.add m) (.add (type m)))))
+        ;(doto (ArrayList.) (.add m) (.add (type m)))
+        m))
 
 (defn my-invoke-func-no-ps [^Ignite ignite ^String method-name]
     (if-let [m (MyPlusUtil/invokeFuncNoPs ignite (str/lower-case method-name))]
-        (doto (ArrayList.) (.add m) (.add (type m)))))
+        ;(doto (ArrayList.) (.add m) (.add (type m)))
+        m))
 
 (defn -invokeFunc [this ^Ignite ignite ^String method-name ^List ps]
     (if (my-lexical/not-null-or-empty? ps)
