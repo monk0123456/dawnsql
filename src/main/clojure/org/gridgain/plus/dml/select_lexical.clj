@@ -310,60 +310,77 @@
 
 ; smart 操作集合的函数
 (defn list-add [^ArrayList lst ^Object obj]
-    (doto lst (.add obj)))
+    (if-not (nil? lst)
+        (doto lst (.add obj))
+        (throw (Exception. "值为空！不能调用 add 方法！"))))
 
 (defn list-set [^ArrayList lst ^Integer index ^Object obj]
-    (doto lst (.set index obj)))
+    (if-not (nil? lst)
+        (doto lst (.set index obj))
+        (throw (Exception. "值为空！不能调用 set 方法！"))))
 
 (defn list-remove [dic-lst ^Integer index]
-    (cond (instance? java.util.List dic-lst) (MyTools/removeIndex dic-lst index)
-          (instance? java.util.Hashtable dic-lst) (.remove dic-lst index)))
+    (if-not (nil? dic-lst)
+        (cond (instance? java.util.List dic-lst) (MyTools/removeIndex dic-lst index)
+              (instance? java.util.Hashtable dic-lst) (.remove dic-lst index))
+        (throw (Exception. "值为空！不能调用 remove 方法！"))))
 
 (defn list-take [^ArrayList lst ^Integer index]
-    (if (> (count lst) index)
-        (.subList lst 0 index)))
+    (if-not (nil? lst)
+        (if (> (count lst) index)
+            (.subList lst 0 index))
+        (throw (Exception. "值为空！不能调用 take 方法！"))))
 
 (defn list-drop [^ArrayList lst ^Integer index]
-    (let [my-count (count lst)]
-        (.subList lst index my-count)))
+    (if-not (nil? lst)
+        (let [my-count (count lst)]
+            (.subList lst index my-count))
+        (throw (Exception. "值为空！不能调用 drop 方法！"))))
 
 (defn list-take-last [^ArrayList lst ^Integer index]
-    ;(take-last index lst)
-    (let [my-count (count lst)]
-        (.subList lst (- my-count index) my-count)))
+    (if-not (nil? lst)
+        (let [my-count (count lst)]
+            (.subList lst (- my-count index) my-count))
+        (throw (Exception. "值为空！不能调用 takeLast 方法！"))))
 
 (defn list-drop-last [^ArrayList lst ^Integer index]
-    ;(drop-last index lst)
-    (.subList lst 0 (- (count lst) index)))
+    (if-not (nil? lst)
+        (.subList lst 0 (- (count lst) index))
+        (throw (Exception. "值为空！不能调用 dropLast 方法！"))))
 
 (defn list-peek [^ArrayList lst]
-    ;(.get lst (- (.size lst) 1))
-    (last lst))
+    (if-not (nil? lst)
+        (last lst)
+        (throw (Exception. "值为空！不能调用 peek 方法！"))))
 
 (defn list-pop [^ArrayList lst]
-    (.subList lst 0 (- (count lst) 1)))
+    (if-not (nil? lst)
+        (.subList lst 0 (- (count lst) 1))
+        (throw (Exception. "值为空！不能调用 pop 方法！"))))
 
 (defn my-concat [a & rs]
     (letfn [(my-concat-str [a & rs]
-                (str/join (apply conj [a] rs)))
-            ]
-        (cond (string? a) (if (nil? rs)
-                              (my-concat-str a)
-                              (apply my-concat-str a rs))
-              (is-seq? a) (if (nil? rs)
-                              a
-                              (apply concat a rs))
-              :else
-              (if (nil? rs)
-                  (my-concat-str a)
-                  (apply my-concat-str a rs))
-              )))
+                (str/join (apply conj [a] rs)))]
+        (if-not (nil? a)
+            (cond (string? a) (if (nil? rs)
+                                  (my-concat-str a)
+                                  (apply my-concat-str a rs))
+                  (is-seq? a) (if (nil? rs)
+                                  a
+                                  (apply concat a rs))
+                  :else
+                  (if (nil? rs)
+                      (my-concat-str a)
+                      (apply my-concat-str a rs))
+                  )
+            (throw (Exception. "值为空！不能调用 concat 方法！")))))
 
 (defn to-char [m & ps]
     (cond (integer? m) (MyFunction/to_char_int m)
           (or (instance? long m) (instance? Long m)) (MyFunction/to_char_long m)
           (double? m) (MyFunction/to_char_double m)
           (instance? Date m) (MyFunction/to_char_date m (first ps))
+          (nil? m) (throw (Exception. "值为空！不能调用 to_char 方法！"))
           ))
 
 (defn my-sign [m]
@@ -371,12 +388,15 @@
           (or (instance? long m) (instance? Long m)) (MyFunction/sign_long m)
           (double? m) (MyFunction/sign_double m)
           (string? m) (MyFunction/sign_str m)
+          (nil? m) (throw (Exception. "值为空！不能调用 sign 方法！"))
           ))
 
 (defn decode [m]
-    (if (is-seq? m)
-        (MyFunction/decode (to_arryList m))
-        (throw (Exception. "decode 的输入参数只能的序列！"))))
+    (cond (is-seq? m) (MyFunction/decode (to_arryList m))
+          (nil? m) (throw (Exception. "值为空！不能调用 decode 方法！"))
+          :else
+          (throw (Exception. "decode 的输入参数只能的序列！"))
+          ))
 
 (defn trunc_double [^Double ps num]
     (letfn [(get-front-back [^Double ps]
@@ -404,22 +424,33 @@
     )
 
 (defn trunc [m & ps]
-    (cond (and (double? m) (not (nil? ps)) (number? (first ps))) (trunc_double m (first ps))
-          (and (instance? Date m) (not (nil? ps)) (string? (first ps))) (MyFunction/trunc_date m (first ps))
-          (and (instance? Date m) (nil? ps)) (MyFunction/trunc_single_date m)
-          ))
+    (if-not (nil? m)
+        (cond (and (double? m) (not (nil? ps)) (number? (first ps))) (trunc_double m (first ps))
+              (and (instance? Date m) (not (nil? ps)) (string? (first ps))) (MyFunction/trunc_date m (first ps))
+              (and (instance? Date m) (nil? ps)) (MyFunction/trunc_single_date m))
+        (throw (Exception. "值为空！不能调用 trunc 方法！"))))
 
 (defn substr [str start count]
-    (MyFunction/substr str (MyConvertUtil/ConvertToInt start) (MyConvertUtil/ConvertToInt count)))
+    (if-not (nil? str)
+        (MyFunction/substr str (MyConvertUtil/ConvertToInt start) (MyConvertUtil/ConvertToInt count))
+        (throw (Exception. "值为空！不能调用 substr 方法！"))))
 
 (defn least [lst]
-    (MyFunction/least (to_arryList lst)))
+    (if-not (nil? lst)
+        (MyFunction/least (to_arryList lst))
+        (throw (Exception. "值为空！不能调用 least 方法！"))))
 
 (defn greatest [lst]
-    (MyFunction/greatest (to_arryList lst)))
+    (if-not (nil? lst)
+        (MyFunction/greatest (to_arryList lst))
+        (throw (Exception. "值为空！不能调用 greatest 方法！"))))
 
 (defn my-mod [v1 v2]
-    (MyFunction/mod (MyConvertUtil/ConvertToInt v1) (MyConvertUtil/ConvertToInt v2)))
+    (try
+        (MyFunction/mod (MyConvertUtil/ConvertToInt v1) (MyConvertUtil/ConvertToInt v2))
+        (catch Exception e
+            (throw e)
+            )))
 
 (defn my-round [^Double v0 num]
     (MyFunction/round v0 (MyConvertUtil/ConvertToInt num)))
@@ -444,70 +475,114 @@
         (MyFunction/rtrim str (first my-key))))
 
 (defn my-avg [lst]
-    (MyFunction/avg (to_arryList lst)))
+    (if-not (nil? lst)
+        (MyFunction/avg (to_arryList lst))
+        (throw (Exception. "值为空！不能调用 avg 方法！"))))
 
 (defn my-acos [m]
-    (MyFunction/acos (MyConvertUtil/ConvertToDouble m)))
+    (if-not (nil? m)
+        (MyFunction/acos (MyConvertUtil/ConvertToDouble m))
+        (throw (Exception. "值为空！不能调用 acos 方法！"))))
 
 (defn my-asin [m]
-    (MyFunction/asin (MyConvertUtil/ConvertToDouble m)))
+    (if-not (nil? m)
+        (MyFunction/asin (MyConvertUtil/ConvertToDouble m))
+        (throw (Exception. "值为空！不能调用 asin 方法！"))))
 
 (defn my-atan [m]
-    (MyFunction/atan (MyConvertUtil/ConvertToDouble m)))
+    (if-not (nil? m)
+        (MyFunction/atan (MyConvertUtil/ConvertToDouble m))
+        (throw (Exception. "值为空！不能调用 atan 方法！"))))
 
 (defn my-ceiling [m]
-    (MyFunction/ceiling (MyConvertUtil/ConvertToDouble m)))
+    (if-not (nil? m)
+        (MyFunction/ceiling (MyConvertUtil/ConvertToDouble m))
+        (throw (Exception. "值为空！不能调用 ceiling 方法！"))))
 
 (defn my-cos [m]
-    (MyFunction/cos (MyConvertUtil/ConvertToDouble m)))
+    (if-not (nil? m)
+        (MyFunction/cos (MyConvertUtil/ConvertToDouble m))
+        (throw (Exception. "值为空！不能调用 cos 方法！"))))
 
 (defn my-cosh [m]
-    (MyFunction/cosh (MyConvertUtil/ConvertToDouble m)))
+    (if-not (nil? m)
+        (MyFunction/cosh (MyConvertUtil/ConvertToDouble m))
+        (throw (Exception. "值为空！不能调用 cosh 方法！"))))
 
 (defn my-cot [m]
-    (MyFunction/cot (MyConvertUtil/ConvertToDouble m)))
+    (if-not (nil? m)
+        (MyFunction/cot (MyConvertUtil/ConvertToDouble m))
+        (throw (Exception. "值为空！不能调用 cot 方法！"))))
 
 (defn my-degrees [m]
-    (MyFunction/degrees (MyConvertUtil/ConvertToDouble m)))
+    (if-not (nil? m)
+        (MyFunction/degrees (MyConvertUtil/ConvertToDouble m))
+        (throw (Exception. "值为空！不能调用 degrees 方法！"))))
 
 (defn my-exp [m]
-    (MyFunction/exp (MyConvertUtil/ConvertToDouble m)))
+    (if-not (nil? m)
+        (MyFunction/exp (MyConvertUtil/ConvertToDouble m))
+        (throw (Exception. "值为空！不能调用 exp 方法！"))))
 
 (defn my-floor [m]
-    (MyFunction/floor (MyConvertUtil/ConvertToDouble m)))
+    (if-not (nil? m)
+        (MyFunction/floor (MyConvertUtil/ConvertToDouble m))
+        (throw (Exception. "值为空！不能调用 floor 方法！"))))
 
 (defn my-ln [m]
-    (MyFunction/ln (MyConvertUtil/ConvertToDouble m)))
+    (if-not (nil? m)
+        (MyFunction/ln (MyConvertUtil/ConvertToDouble m))
+        (throw (Exception. "值为空！不能调用 ln 方法！"))))
 
 (defn my-log [m n]
-    (MyFunction/log (MyConvertUtil/ConvertToDouble m) (MyConvertUtil/ConvertToDouble n)))
+    (if-not (nil? m)
+        (MyFunction/log (MyConvertUtil/ConvertToDouble m) (MyConvertUtil/ConvertToDouble n))
+        (throw (Exception. "值为空！不能调用 log 方法！"))))
 
 (defn my-log10 [m]
-    (MyFunction/log10 (MyConvertUtil/ConvertToDouble m)))
+    (if-not (nil? m)
+        (MyFunction/log10 (MyConvertUtil/ConvertToDouble m))
+        (throw (Exception. "值为空！不能调用 log10 方法！"))))
 
 (defn my-radians [m]
-    (MyFunction/radians (MyConvertUtil/ConvertToLong m)))
+    (if-not (nil? m)
+        (MyFunction/radians (MyConvertUtil/ConvertToLong m))
+        (throw (Exception. "值为空！不能调用 radians 方法！"))))
 
 (defn my-roundMagic [m]
-    (MyFunction/roundMagic (MyConvertUtil/ConvertToDouble m)))
+    (if-not (nil? m)
+        (MyFunction/roundMagic (MyConvertUtil/ConvertToDouble m))
+        (throw (Exception. "值为空！不能调用 roundMagic 方法！"))))
 
 (defn my-char [m]
-    (MyFunction/my_char (MyConvertUtil/ConvertToInt m)))
+    (if-not (nil? m)
+        (MyFunction/my_char (MyConvertUtil/ConvertToInt m))
+        (throw (Exception. "值为空！不能调用 char 方法！"))))
 
 (defn my-length [m]
-    (MyFunction/length (MyConvertUtil/ConvertToString m)))
+    (if-not (nil? m)
+        (MyFunction/length (MyConvertUtil/ConvertToString m))
+        (throw (Exception. "值为空！不能调用 length 方法！"))))
 
 (defn my-ucase [m]
-    (MyFunction/ucase (MyConvertUtil/ConvertToString m)))
+    (if-not (nil? m)
+        (MyFunction/ucase (MyConvertUtil/ConvertToString m))
+        (throw (Exception. "值为空！不能调用 ucase 方法！"))))
 
 (defn my-day-name [m]
-    (MyFunction/day_name (MyConvertUtil/ConvertToTimestamp m)))
+    (if-not (nil? m)
+        (MyFunction/day_name (MyConvertUtil/ConvertToTimestamp m))
+        (throw (Exception. "值为空！不能调用 day_name 方法！"))))
 
 (defn my-to-number [m]
-    (MyFunction/to_number (MyConvertUtil/ConvertToString m)))
+    (if-not (nil? m)
+        (MyFunction/to_number (MyConvertUtil/ConvertToString m))
+        (throw (Exception. "值为空！不能调用 to_number 方法！"))))
 
 (defn my-add-months [ps num]
-    (MyFunction/add_months (MyConvertUtil/ConvertToTimestamp ps) (MyConvertUtil/ConvertToInt num)))
+    (if-not (nil? ps)
+        (MyFunction/add_months (MyConvertUtil/ConvertToTimestamp ps) (MyConvertUtil/ConvertToInt num))
+        (throw (Exception. "值为空！不能调用 add_months 方法！"))))
 
 (defn no-sql-create [ignite group_id m]
     (.myCreate (.getNoSqlFun (MyNoSqlFunService/getInstance)) ignite group_id m))
@@ -540,47 +615,75 @@
     msg)
 
 (defn my-regular [line]
-    (re-pattern line))
+    (if-not (nil? line)
+        (re-pattern line)
+        (throw (Exception. "值为空！不能调用 regular 方法！"))))
 
 ; (my-str-replace "123wer" "(?i)\\d+" "吴大富")
 (defn my-str-replace [line line-re line-rs]
-    (str/replace line (re-pattern line-re) line-rs))
+    (if-not (nil? line)
+        (str/replace line (re-pattern line-re) line-rs)
+        (throw (Exception. "值为空！不能调用 str_replace 方法！"))))
 
 (defn my-str-split [line line-re]
-    (str/split line (re-pattern line-re)))
+    (if-not (nil? line)
+        (str/split line (re-pattern line-re))
+        (throw (Exception. "值为空！不能调用 str_split 方法！"))))
 
 (defn my-str-find [line-re line]
-    (re-find (re-pattern line-re) line))
+    (if-not (nil? line)
+        (re-find (re-pattern line-re) line)
+        (throw (Exception. "值为空！不能调用 str_find 方法！"))))
 
 (defn show-cache-name [name]
-    (str/replace name (re-pattern "^(?i)f_\\w+_") ""))
+    (if-not (nil? name)
+        (str/replace name (re-pattern "^(?i)f_\\w+_") "")
+        (throw (Exception. "值为空！不能调用 show_cache_name 方法！"))))
 
 (defn my-max [lst]
-    (apply max lst))
+    (if-not (nil? lst)
+        (apply max lst)
+        (throw (Exception. "值为空！不能调用 max 方法！"))))
 
 (defn my-min [lst]
-    (apply min lst))
+    (if-not (nil? lst)
+        (apply min lst)
+        (throw (Exception. "值为空！不能调用 min 方法！"))))
 
 (defn my-sin [num]
-    (Math/sin num))
+    (if-not (nil? num)
+        (Math/sin num)
+        (throw (Exception. "值为空！不能调用 sin 方法！"))))
 
 (defn my-sinh [num]
-    (Math/sinh num))
+    (if-not (nil? num)
+        (Math/sinh num)
+        (throw (Exception. "值为空！不能调用 sinh 方法！"))))
 
 (defn my-tan [num]
-    (Math/tan num))
+    (if-not (nil? num)
+        (Math/tan num)
+        (throw (Exception. "值为空！不能调用 tan 方法！"))))
 
 (defn my-tanh [num]
-    (Math/tanh num))
+    (if-not (nil? num)
+        (Math/tanh num)
+        (throw (Exception. "值为空！不能调用 tanh 方法！"))))
 
 (defn my-atan2 [x y]
-    (Math/atan2 x y))
+    (if-not (nil? num)
+        (Math/atan2 x y)
+        (throw (Exception. "值为空！不能调用 atan2 方法！"))))
 
 (defn my-sqrt [num]
-    (Math/sqrt num))
+    (if-not (nil? num)
+        (Math/sqrt num)
+        (throw (Exception. "值为空！不能调用 sqrt 方法！"))))
 
 (defn my-pow [a b]
-    (Math/pow a b))
+    (if-not (nil? a)
+        (Math/pow a b)
+        (throw (Exception. "值为空！不能调用 pow 方法！"))))
 
 (defn my-rand []
     (.nextDouble (Random.)))
@@ -601,13 +704,19 @@
     (MyFunction/random_uuid))
 
 (defn my-insert [s1 start length s2]
-    (MyFunction/insert (MyConvertUtil/ConvertToString s1) (MyConvertUtil/ConvertToInt start) (MyConvertUtil/ConvertToInt length) (MyConvertUtil/ConvertToString s2)))
+    (if-not (nil? s1)
+        (MyFunction/insert (MyConvertUtil/ConvertToString s1) (MyConvertUtil/ConvertToInt start) (MyConvertUtil/ConvertToInt length) (MyConvertUtil/ConvertToString s2))
+        (throw (Exception. "值为空！不能调用 insert 方法！"))))
 
 (defn my-left [s count]
-    (MyFunction/left (MyConvertUtil/ConvertToString s) (MyConvertUtil/ConvertToInt count)))
+    (if-not (nil? s)
+        (MyFunction/left (MyConvertUtil/ConvertToString s) (MyConvertUtil/ConvertToInt count))
+        (throw (Exception. "值为空！不能调用 left 方法！"))))
 
 (defn my-right [s count]
-    (MyFunction/right (MyConvertUtil/ConvertToString s) (MyConvertUtil/ConvertToInt count)))
+    (if-not (nil? s)
+        (MyFunction/right (MyConvertUtil/ConvertToString s) (MyConvertUtil/ConvertToInt count))
+        (throw (Exception. "值为空！不能调用 left 方法！"))))
 
 (defn my-locate [search s start]
     (MyFunction/locate (MyConvertUtil/ConvertToString search) (MyConvertUtil/ConvertToString s) (MyConvertUtil/ConvertToInt start)))
@@ -909,13 +1018,15 @@
     (not (null-or-empty? m)))
 
 (defn map-list-get [dic-lst my-key]
-    (cond (map? dic-lst) (get dic-lst my-key)
-          (and (is-seq? dic-lst) (number? my-key)) (nth dic-lst my-key)
-          (and (instance? java.util.List dic-lst) (number? my-key)) (nth dic-lst my-key)
-          (instance? java.util.Hashtable dic-lst) (.get dic-lst my-key)
-          :else
-          (throw (Exception. "数据集没有该方法"))
-          ))
+    (if-not (nil? dic-lst)
+        (cond (map? dic-lst) (get dic-lst my-key)
+              (and (is-seq? dic-lst) (number? my-key)) (nth dic-lst my-key)
+              (and (instance? java.util.List dic-lst) (number? my-key)) (nth dic-lst my-key)
+              (instance? java.util.Hashtable dic-lst) (.get dic-lst my-key)
+              :else
+              (throw (Exception. "数据集没有该方法"))
+              )
+        (throw (Exception. "值为空！不能调用 get 方法！"))))
 
 ; 获取 select sys 的权限 code
 (defn get-select-sys-code [ignite schema_name my_group_id]
