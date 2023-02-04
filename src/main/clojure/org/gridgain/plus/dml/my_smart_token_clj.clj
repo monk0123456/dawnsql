@@ -232,6 +232,9 @@
 
                 (my-lexical/is-eq? func-name "loadCode") (.loadSmartSql (.getLoadSmartSql (MyLoadSmartSqlService/getInstance)) ignite group_id (-> (first lst_ps) :item_name))
 
+                ; 输入一个方法名获取这个方法调用的所有函数和 smart code
+                (my-lexical/is-eq? func-name "get_smart_code") (format "(my-func-ast/get-func-code ignite group_id %s)" (get-lst-ps-vs ignite group_id lst_ps my-context))
+
                 (my-lexical/is-eq? func-name "has_user_token_type") (format "(my-smart-token-clj/has_user_token_type %s)" (get-lst-ps-vs ignite group_id lst_ps my-context))
                 (my-lexical/is-eq? func-name "get_user_group") (format "(my-smart-token-clj/get_user_group ignite group_id %s)" (get-lst-ps-vs ignite group_id lst_ps my-context))
                 (my-lexical/is-eq? func-name "get_user_token") (format "(my-smart-token-clj/get_user_token ignite %s)" (get-lst-ps-vs ignite group_id lst_ps my-context))

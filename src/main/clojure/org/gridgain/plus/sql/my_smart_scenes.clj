@@ -187,6 +187,7 @@
             '[org.gridgain.plus.smart-func :as smart-func]
             '[org.gridgain.plus.ml.my-ml-train-data :as my-ml-train-data]
             '[org.gridgain.plus.ml.my-ml-func :as my-ml-func]
+            '[org.gridgain.plus.dml.my-func-ast :as my-func-ast]
             '[clojure.core.reducers :as r]
             '[clojure.string :as str]
             '[clojure.walk :as w]

@@ -222,6 +222,9 @@
                 (my-lexical/is-eq? func-name "fit") (format "(my-ml-func/ml-fit ignite group_id %s)" (get-lst-ps-vs ignite group_id lst_ps args-dic))
                 (my-lexical/is-eq? func-name "predict") (format "(my-ml-func/ml-predict ignite group_id %s)" (get-lst-ps-vs ignite group_id lst_ps args-dic))
 
+                ; 输入一个方法名获取这个方法调用的所有函数和 smart code
+                (my-lexical/is-eq? func-name "get_smart_code") (format "(my-func-ast/get-func-code ignite group_id %s)" (get-lst-ps-vs ignite group_id lst_ps args-dic))
+
                 (is-func? ignite func-name) (if-not (empty? lst_ps)
                                                 (format "(my-smart-scenes/my-invoke-func ignite \"%s\" [%s])" func-name (get-lst-ps-vs ignite group_id lst_ps args-dic))
                                                 (format "(my-smart-scenes/my-invoke-func-no-ps ignite \"%s\")" func-name))

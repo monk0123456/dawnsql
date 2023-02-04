@@ -104,6 +104,8 @@
                   (my-lexical/is-eq? func-name "fit") (apply (eval (read-string "my-ml-func/ml-fit")) (concat [ignite group_id] ps))
                   (my-lexical/is-eq? func-name "predict") (apply (eval (read-string "my-ml-func/ml-predict")) (concat [ignite group_id] ps))
 
+                  (my-lexical/is-eq? func-name "get_smart_code") (apply (eval (read-string "my-func-ast/get-func-code")) (concat [ignite group_id] ps))
+
                   (my-lexical/is-func? ignite func-name) (if-not (empty? ps)
                                                              (apply (eval (read-string "my-smart-scenes/my-invoke-func")) (concat [ignite (format "%s" func-name)] [ps]))
                                                              (apply (eval (read-string "my-smart-scenes/my-invoke-func-no-ps")) [ignite (format "%s" func-name)]))

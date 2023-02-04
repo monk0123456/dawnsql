@@ -1,5 +1,7 @@
 package cn.plus.model.db;
 
+import com.google.common.base.Strings;
+
 import java.io.Serializable;
 
 public class MyScenesCachePk implements Serializable {
@@ -11,7 +13,10 @@ public class MyScenesCachePk implements Serializable {
     public MyScenesCachePk(final Long group_id, final String scenes_name)
     {
         this.group_id = group_id;
-        this.scenes_name = scenes_name;
+        if (!Strings.isNullOrEmpty(scenes_name))
+        {
+            this.scenes_name = scenes_name;
+        }
     }
 
     public MyScenesCachePk()

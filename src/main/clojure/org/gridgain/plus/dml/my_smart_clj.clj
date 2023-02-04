@@ -510,11 +510,11 @@
 (defn smart-lst-to-clj [^Ignite ignite group_id ^clojure.lang.LazySeq lst]
     (let [smart-lst (re-fn lst)]
         (let [ast (first (my-smart-sql/my-get-ast-lst smart-lst))]
-            (println lst)
-            (println "*******************")
-            (println ast)
-            (println group_id)
-            (println "*******************")
+            ;(println lst)
+            ;(println "*******************")
+            ;(println ast)
+            ;(println group_id)
+            ;(println "*******************")
             (if (has-func ignite group_id ast)
                 (if-let [my-smart-code (my-ast-to-clj ignite group_id ast nil)]
                     (do
