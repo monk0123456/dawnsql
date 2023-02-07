@@ -28,6 +28,82 @@
 (declare get-create-table-items get_items get_item_obj items_obj get_items_obj_lst set_pk
          set_pk_set pk_line to_item table_items my_get_obj_ds)
 
+(defn item-attr [lst]
+    (loop [[f & r] lst rs {}]
+        (if (some? f)
+            (if (map? f)
+                (cond (contains? f :auto) (recur r (assoc rs :auto true))
+                      (contains? f :pk) (recur r (assoc rs :pk true))
+                      :else
+                      (recur r rs))
+                (recur r rs))
+            (if (not (= rs {}))
+                rs))))
+
+(defn item-pk-auto [lst]
+    (loop [[f & r] lst rs []]
+        (if (some? f)
+            (if-let [m (item-attr f)]
+                (recur r (conj rs {:my_new f :my_attr m}))
+                (recur r rs))
+            rs)))
+
+(defn get-pk-item [lst]
+    (loop [[f & r] lst pk []]
+        (if (some? f)
+            (if (and (map? f) (contains? f :pk))
+                (recur nil (-> f :pk))
+                (recur r pk))
+            (if (= (count pk) 1)
+                (first pk)
+                (throw (Exception. (format "创建语句错误！位置在创建主键的位置 %s" (first pk))))))))
+
+(defn sign-pk [lst]
+    (if (and (string? (first lst)) (not (my-lexical/is-eq? (first lst) (get-pk-item lst))))
+        (throw (Exception. (format "创建语句错误！位置在创建主键的位置 %s" (first lst))))))
+
+(defn is-auto [m]
+    (let [{{my_auto :auto} :my_attr} m]
+        (if (true? my_auto)
+            true false)))
+
+(defn is-pk [m]
+    (let [{{pk :pk} :my_attr} m]
+        (if (true? pk)
+            true false)))
+
+(defn item-auto [m]
+    (if-let [{my_new :my_new} m]
+        (first my_new)))
+
+(defn item-pk [m]
+    (if-let [{my_new :my_new} m]
+        (let [{pks :pk} (first my_new)]
+            pks)))
+
+(defn is-auto-pk [m-auto m-pk]
+    (let [pks (item-pk m-pk) it-auto (item-auto m-auto)]
+        (if (not (and (= (count pks) 1) (my-lexical/is-eq? (first pks) it-auto)))
+            (throw (Exception. (format "创建语句错误！位置在创建主键或者设置自增长主键值！%s %s" (first pks) it-auto))))))
+
+(defn rs-two [rs]
+    (cond (and (true? (is-auto (first rs))) (true? (is-pk (last rs)))) (is-auto-pk (first rs) (last rs))
+          (and (true? (is-auto (last rs))) (true? (is-pk (first rs)))) (is-auto-pk (last rs) (first rs))))
+
+(defn is-legal [lst]
+    (let [rs (item-pk-auto lst)]
+        (cond (= (count rs) 1) (let [{m :my_attr} (first rs)]
+                                   (cond (and (contains? m :auto) (not (contains? m :pk))) (throw (Exception. (format "创建表的语句错误！只有主键才能被设置成自增长 %s" (first (-> (first rs) :my_new)))))
+                                         (contains? m :pk) (sign-pk (-> (first rs) :my_new))))
+              (= (count rs) 2) (rs-two rs)
+              :else
+              (throw (Exception. "创建语句错误！位置在创建主键或者设置自增长主键值！"))
+              )))
+
+(defn my-is-legal [lst]
+    (if (nil? (is-legal lst))
+        lst))
+
 (defn get_items
     ([lst] (get_items lst [] [] []))
     ([[f & r] lst_stack item_stack lst]
@@ -46,8 +122,16 @@
     ([[f & r] pk_stack type_stack lst_type lst]
      (if (some? f)
          (cond (and (my-lexical/is-eq? f "comment") (= (first r) "(") (= (second (rest r)) ")")) (recur (rest (rest (rest r))) pk_stack type_stack lst_type (conj lst {:comment (second r)}))
-               (and (my-lexical/is-eq? f "PRIMARY") (my-lexical/is-eq? (first r) "KEY")) (if (> (count (rest r)) 0) (recur (rest (rest r)) (conj pk_stack (second r)) type_stack lst_type lst)
-                                                                                                                    (recur nil nil type_stack lst_type (conj lst {:pk [(first lst)]})))
+               ;(and (my-lexical/is-eq? f "PRIMARY") (my-lexical/is-eq? (first r) "KEY")) (if (> (count (rest r)) 0)
+               ;                                                                              ;(recur (rest (rest r)) (conj pk_stack (second r)) type_stack lst_type lst)
+               ;                                                                              (if (not (nil? (rest (rest r))))
+               ;                                                                                  (recur (rest (rest r)) (conj pk_stack (second r)) type_stack lst_type lst)
+               ;                                                                                  (recur (rest r) nil type_stack lst_type (conj lst {:pk [(first lst)]})))
+               ;                                                                              (recur nil nil type_stack lst_type (conj lst {:pk [(first lst)]})))
+               (and (my-lexical/is-eq? f "PRIMARY") (my-lexical/is-eq? (first r) "KEY")) (cond (nil? (rest r)) (recur nil nil type_stack lst_type (conj lst {:pk [(first lst)]}))
+                                                                                               (and (not (nil? (first (rest r)))) (= "(" (first (rest r)))) (recur (rest (rest r)) (conj pk_stack (second r)) type_stack lst_type lst)
+                                                                                               :else
+                                                                                               (recur (rest r) nil type_stack lst_type (conj lst {:pk [(first lst)]})))
                (and (> (count pk_stack) 0) (= f ")")) (recur r [] type_stack lst_type (conj lst {:pk (filter #(not= % ",") (rest pk_stack))}))
                (and (> (count pk_stack) 0) (not= f ")")) (recur r (conj pk_stack f) type_stack lst_type lst)
                (and (> (count type_stack) 0) (= f "(")) (recur r pk_stack (conj type_stack f) (conj lst_type f) lst)
@@ -81,7 +165,7 @@
             lst_items)))
 (defn get_items_obj_lst [items-lst]
     (when-let [my_items (items_obj (get_items (drop-last 1 (rest items-lst))))]
-        my_items))
+        (my-is-legal my_items)))
 (defn set_pk
     ([lst_table_item column_name] (set_pk lst_table_item column_name []))
     ([[f & r] ^String column_name ^ArrayList lst]
