@@ -14,6 +14,8 @@ import java.util.List;
 public class MyGson {
     private static Gson gson = new GsonBuilder()
             .enableComplexMapKeySerialization()
+            .excludeFieldsWithoutExposeAnnotation()
+            .disableHtmlEscaping()
             .setDateFormat("yyyy-MM-dd HH:mm:ss")
             .create();
 

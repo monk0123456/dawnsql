@@ -154,13 +154,6 @@
                     (recur r (concat rs (get-func-code ignite group_id f)))
                     (concat my-rs rs))))))
 
-; 获取所有的 select 语句
-
-; 获取所有的 insert 语句
-
-; 获取所有的 update 语句
-
-; 获取所有的 delete 语句
 
 
 
